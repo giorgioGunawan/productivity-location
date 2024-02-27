@@ -1,17 +1,9 @@
-//
-//  ViewController.swift
-//  ScreenTimeAPIExample
-//
-//  Created by Doyeon on 2023/04/24.
-//
-
 import UIKit
 import FamilyControls
 import SwiftUI
 
 final class ViewController: UIViewController {
 
-    // MARK: - Properties
     var hostingController: UIHostingController<SwiftUIView>?
     
     private let _center = AuthorizationCenter.shared

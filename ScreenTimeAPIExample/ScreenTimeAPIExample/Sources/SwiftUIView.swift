@@ -15,7 +15,7 @@ struct SwiftUIView: View {
     var body: some View {
         VStack {
             Button(action: { isPresented.toggle() }) {
-                Text("Check the list of blocked apps 🤗")
+                Text("Check the list of blocked apps")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.white)
                     .padding(.vertical, 12)
