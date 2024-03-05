@@ -1,10 +1,3 @@
-//
-//  AppDelegate.swift
-//  ScreenTimeAPIExample
-//
-//  Created by Doyeon on 2023/04/24.
-//
-
 import UIKit
 
 @main

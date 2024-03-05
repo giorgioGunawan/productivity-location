@@ -1,13 +1,25 @@
 import UIKit
 import FamilyControls
 import SwiftUI
+import CoreLocation
 
 final class ViewController: UIViewController {
 
     var hostingController: UIHostingController<SwiftUIView>?
     
+    let locationManager = CLLocationManager()
+
     private let _center = AuthorizationCenter.shared
-    private let _youTubeBlocker = YouTubeBlocker()
+    private let _appBlocker = AppBlocker()
+    
+    private func getLocation() {
+        locationManager.requestWhenInUseAuthorization()
+        if CLLocationManager.locationServicesEnabled() {
+            locationManager.delegate = self
+            locationManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
+            locationManager.startUpdatingLocation()
+        }
+    }
 
     private lazy var _contentView: UIHostingController<some View> = {
         let model = BlockingApplicationModel.shared
@@ -52,6 +64,7 @@ final class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         _setup()
+        getLocation()
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -103,7 +116,7 @@ extension ViewController {
 // MARK: - Actions
 extension ViewController {
     @objc private func _tappedBlockButton() {
-        _youTubeBlocker.block { result in
+        _appBlocker.block { result in
             switch result {
             case .success():
                 print("Blocking Successful")
@@ -115,7 +128,7 @@ extension ViewController {
     
     @objc private func _tappedReleaseButton() {
         print("Unblocking")
-        _youTubeBlocker.unblockAllApps()
+        _appBlocker.unblockAllApps()
     }
     
     private func _requestAuthorization() {
@@ -126,5 +139,12 @@ extension ViewController {
                 print(error.localizedDescription)
             }
         }
+    }
+}
+
+extension ViewController: CLLocationManagerDelegate {
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+        BlockingApplicationModel.shared.updateLocation(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude)
     }
 }
