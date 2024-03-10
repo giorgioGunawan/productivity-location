@@ -1,27 +1,16 @@
-import SwiftUI
-import CoreLocation
+//
+//  SwiftUIView.swift
+//  ScreenTimeAPIExample
+//
+//  Created by Doyeon on 2023/04/25.
+//
 
-class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
-    var model: BlockingApplicationModel
-    
-    init(model: BlockingApplicationModel) {
-        self.model = model
-    }
-    
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        if let location = locations.last {
-            model.latitude = location.coordinate.latitude
-            model.longitude = location.coordinate.longitude
-        }
-    }
-}
+import SwiftUI
 
 struct SwiftUIView: View {
     
     @EnvironmentObject var model: BlockingApplicationModel
-    @State private var isPresented = false
-    @State private var locationManager = CLLocationManager()
-    @State private var locationManagerDelegate: LocationManagerDelegate?
+    @State var isPresented = false
     
     var body: some View {
         VStack {
@@ -34,20 +23,7 @@ struct SwiftUIView: View {
                     .background(Color.blue)
                     .cornerRadius(8)
             }
-            .familyActivityPicker(isPresented: $isPresented, selection: $model.newSelection)
-            
-            Spacer()
-            
-            VStack {
-                Text("Latitude: \(model.latitude)")
-                Text("Longitude: \(model.longitude)")
-            }
-        }
-        .onAppear {
-            locationManagerDelegate = LocationManagerDelegate(model: model)
-            locationManager.delegate = locationManagerDelegate
-            locationManager.requestWhenInUseAuthorization()
-            locationManager.startUpdatingLocation()
+                .familyActivityPicker(isPresented: $isPresented, selection: $model.newSelection)
         }
     }
 }
@@ -55,6 +31,5 @@ struct SwiftUIView: View {
 struct SwiftUIView_Previews: PreviewProvider {
     static var previews: some View {
         SwiftUIView()
-            .environmentObject(BlockingApplicationModel())
     }
 }
