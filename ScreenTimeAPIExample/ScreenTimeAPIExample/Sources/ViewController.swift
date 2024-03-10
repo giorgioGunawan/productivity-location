@@ -6,8 +6,8 @@ final class ViewController: UIViewController {
 
     var hostingController: UIHostingController<SwiftUIView>?
     
-    private let _center = AuthorizationCenter.shared
-    private let _appBlocker = AppBlocker()
+    var _center = AuthorizationCenter.shared
+    var _appBlocker = AppBlocker()
 
     private lazy var _contentView: UIHostingController<some View> = {
         let model = BlockingApplicationModel.shared
@@ -103,14 +103,7 @@ extension ViewController {
 // MARK: - Actions
 extension ViewController {
     @objc private func _tappedBlockButton() {
-        _appBlocker.block { result in
-            switch result {
-            case .success():
-                print("Blocking Successful")
-            case .failure(let error):
-                print("Blocking failed: \(error.localizedDescription)")
-            }
-        }
+        _appBlocker.startBlockingTimer()
     }
     
     @objc private func _tappedReleaseButton() {
