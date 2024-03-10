@@ -9,36 +9,36 @@ struct AppBlocker {
     
     // Add properties to represent the start and end times of the blocking window
     var blockStartTimeComponents = DateComponents(hour: 0, minute: 0) // Represents 00:00
-    var blockEndTimeComponents = DateComponents(hour: 5, minute: 0) // Represents 05:00
+    var blockEndTimeComponents = DateComponents(hour: 9, minute: 0) // Represents 09:00
 
     // Blocking logic with time window
     func block(completion: @escaping (Result<Void, Error>) -> Void) {
         
-        // Create a Calendar instance with GMT timezone
+        // Get user's current timezone
+        let userTimeZone = TimeZone.current
+        
+        // Create a Calendar instance with user's timezone
         var calendar = Calendar.current
+        calendar.timeZone = userTimeZone
+                
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "HH:mm"
+        let timeNow = dateFormatter.string(from: Date())
+        
+        // ===== Convert block times
         calendar.timeZone = TimeZone(identifier: "GMT")!
         
-        // Get current date and extract its date components
-        let now = Date()
-        let currentDateComponents = calendar.dateComponents([.year, .month, .day], from: now)
-
-        // Combine current date components with the blocking time components
-        guard let blockStartTime = calendar.date(from: currentDateComponents.settingHour(blockStartTimeComponents.hour!, minute: blockStartTimeComponents.minute!, second: 0)),
-              let blockEndTime = calendar.date(from: currentDateComponents.settingHour(blockEndTimeComponents.hour!, minute: blockEndTimeComponents.minute!, second: 0)) else {
-            completion(.failure(BlockerError.invalidTimeWindow))
-            return
-        }
+        // Combine the current date with the block start time components to get the block start time
+        let blockStartTime = calendar.date(bySettingHour: blockStartTimeComponents.hour!, minute: blockStartTimeComponents.minute!, second: 0, of: Date());
+        let blockEndTime = calendar.date(bySettingHour: blockEndTimeComponents.hour!, minute: blockEndTimeComponents.minute!, second: 0, of: Date());
         
-        // Print out
-        print(now)
-        print(blockStartTime)
-        print(blockEndTime)
-
+        let blockStart = dateFormatter.string(from: blockStartTime!)
+        let blockEnd = dateFormatter.string(from: blockEndTime!)
+        
+        let shouldBlock = isTimeInRange(timeNow: timeNow, blockStart: blockStart, blockEnd: blockEnd);
+        
         // Check if the current time falls within the blocking window
-        if now >= blockStartTime && now <= blockEndTime {
-            // Inside the blocking window, proceed to block apps
-            print("Blocking Successful")
-            
+        if shouldBlock {
             // Get selected app tokens
             let selectedAppTokens = model.selectedAppsTokens
             
@@ -77,20 +77,37 @@ struct AppBlocker {
         store.shield.applications = []
     }
     
+    func isTimeInRange(timeNow: String, blockStart: String, blockEnd: String) -> Bool {
+        // Create date formatter for parsing time strings
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "HH:mm"
+        
+        // Parse time strings to Date objects
+        guard let timeNowDate = dateFormatter.date(from: timeNow),
+              let blockStartDate = dateFormatter.date(from: blockStart),
+              let blockEndDate = dateFormatter.date(from: blockEnd) else {
+            // Unable to parse time strings, return false
+            return false
+        }
+        
+        // Check if timeNow is within blockStart and blockEnd
+        return timeNowDate >= blockStartDate && timeNowDate <= blockEndDate
+    }
+    
     // Enum for error handling
     enum BlockerError: Error {
         case invalidTimeWindow
         case outsideTimeWindow
+        case invalidTimeZone
     }
 }
 
-// Extension to help combine date components with time components
-extension DateComponents {
-    func settingHour(_ hour: Int, minute: Int, second: Int) -> DateComponents {
-        var copy = self
-        copy.hour = hour
-        copy.minute = minute
-        copy.second = second
-        return copy
+extension Date {
+    func inTimeZone(_ timeZone: TimeZone) -> Date {
+        let formatter = DateFormatter()
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        let dateString = formatter.string(from: self)
+        return formatter.date(from: dateString)!
     }
 }
