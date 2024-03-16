@@ -51,12 +51,9 @@ class AppBlocker: ObservableObject {
         let isInTimeRange = isCurrentTimeInBlockWindow(currentDate: currentDate, blockStartHour: blockStartHour, blockStartMinute: blockStartMinute, blockEndHour: blockEndHour, blockEndMinute: blockEndMinute)
 
         if (isInTimeRange) {
-            self.block { result in }
+            self.block(completion: { _ in})
         } else {
-            // Schedule the timer to start blocking at the next block schedule time
-            timer = Timer.scheduledTimer(withTimeInterval: timeIntervalUntilBlock, repeats: false) { [weak self] _ in
-                self?.block(completion: { _ in })
-            }
+            scheduleBlockTimer(after: timeIntervalUntilBlock);
         }
     
         // If current time is exactly the same as the schedule unblock end, schedule unblock for one minute extra
@@ -99,10 +96,22 @@ class AppBlocker: ObservableObject {
             self?.unblockAllApps()
         }
     }
+    
+    private func scheduleBlockTimer(after timeInterval: TimeInterval) {
+        Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: false) { [weak self] _ in
+            self?.block(completion: { _ in})
+        }
+    }
 
     // Function to unblock all apps
     func unblockAllApps() {
         store.shield.applications = []
+    }
+    
+    func unblockTemp() {
+        store.shield.applications = []
+        
+        self.scheduleBlockTimer(after: 30)
     }
     
     // Enum for error handling
