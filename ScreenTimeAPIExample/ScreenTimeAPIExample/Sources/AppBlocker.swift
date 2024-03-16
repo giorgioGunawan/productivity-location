@@ -25,24 +25,30 @@ class AppBlocker: ObservableObject {
 
     // Function to start the blocking timer
     func startBlockingTimer(blockStartHour: Int, blockEndHour: Int, blockStartMinute: Int, blockEndMinute: Int) {
-        print(blockStartHour)
-        print(blockEndHour)
         // Calculate the time interval until the next block schedule
         let currentDate = Date()
         
-        print(currentDate)
         let calendar = Calendar.current
-        guard let nextBlockDate = calendar.nextDate(after: currentDate, matching: DateComponents(hour: blockStartHour, minute: blockStartMinute), matchingPolicy: .strict) else {
+        
+        guard let nextBlockDate = calendar.nextDate(after: currentDate,
+                                                     matching: DateComponents(hour: blockStartHour, minute: blockStartMinute),
+                                                     matchingPolicy: .strict),
+              let nextBlockEndDate = calendar.nextDate(after: currentDate,
+                                                        matching: DateComponents(hour: blockEndHour, minute: blockEndMinute),
+                                                        matchingPolicy: .strict)
+        else {
             return
         }
+        
         let timeIntervalUntilBlock = nextBlockDate.timeIntervalSince(currentDate)
+        let timeIntervalUntilUnblock = nextBlockEndDate.timeIntervalSince(currentDate)
         
         self.blockStartHour = blockStartHour;
         self.blockEndHour = blockEndHour;
         self.blockStartMinute = blockStartMinute;
         self.blockEndMinute = blockEndMinute;
         
-        var isInTimeRange = isCurrentTimeInBlockWindow(currentDate: currentDate, blockStartHour: blockStartHour, blockStartMinute: blockStartMinute, blockEndHour: blockEndHour, blockEndMinute: blockEndMinute)
+        let isInTimeRange = isCurrentTimeInBlockWindow(currentDate: currentDate, blockStartHour: blockStartHour, blockStartMinute: blockStartMinute, blockEndHour: blockEndHour, blockEndMinute: blockEndMinute)
 
         if (isInTimeRange) {
             self.block { result in
@@ -53,14 +59,15 @@ class AppBlocker: ObservableObject {
                     print("Blocking failed: \(error.localizedDescription)")
                 }
             }
-            return;
-        }
-        // Schedule the timer to start blocking at the next block schedule time
-        timer = Timer.scheduledTimer(withTimeInterval: timeIntervalUntilBlock, repeats: false) { [self] timer in
-            self.block { result in
-                // Handle completion of block operation if needed
+        } else {
+            // Schedule the timer to start blocking at the next block schedule time
+            timer = Timer.scheduledTimer(withTimeInterval: timeIntervalUntilBlock, repeats: false) { [weak self] _ in
+                self?.block(completion: { _ in })
             }
         }
+        
+        // Schedule timer to unblock app
+        scheduleUnblockTimer(after: timeIntervalUntilUnblock)
     }
 
     // Blocking logic with time window
@@ -84,6 +91,14 @@ class AppBlocker: ObservableObject {
             completion(.success(()))
         } catch {
             completion(.failure(error))
+        }
+    }
+    
+    // Function to schedule unblock timer
+    private func scheduleUnblockTimer(after timeInterval: TimeInterval) {
+        Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: false) { [weak self] _ in
+            self?.unblockAllApps()
+            print("Unblocking successful")
         }
     }
 
