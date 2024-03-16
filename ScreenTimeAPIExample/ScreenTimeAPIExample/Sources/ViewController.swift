@@ -7,46 +7,17 @@ final class ViewController: UIViewController {
     var hostingController: UIHostingController<SwiftUIView>?
     
     var _center = AuthorizationCenter.shared
-    var _appBlocker = AppBlocker()
+
+    @State private var _appBlocker = AppBlocker()
 
     private lazy var _contentView: UIHostingController<some View> = {
         let model = BlockingApplicationModel.shared
+        // Calls the SwiftUIView class - and I think that's it?
         let hostingController = UIHostingController(
             rootView: SwiftUIView()
                 .environmentObject(model)
         )
         return hostingController
-    }()
-
-    private let _blockButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setTitle("Block", for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 18, weight: .bold)
-        button.setTitleColor(.white, for: .normal)
-        button.backgroundColor = .red
-        button.layer.cornerRadius = 8
-        button.translatesAutoresizingMaskIntoConstraints = false
-        return button
-    }()
-    
-    private let _releaseButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setTitle("Unblock", for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 18, weight: .bold)
-        button.setTitleColor(.white, for: .normal)
-        button.backgroundColor = .blue
-        button.layer.cornerRadius = 8
-        button.translatesAutoresizingMaskIntoConstraints = false
-        return button
-    }()
-    
-    private let _buttonStackView: UIStackView = {
-        let stackView = UIStackView()
-        stackView.axis = .vertical
-        stackView.spacing = 10
-        stackView.distribution = .fillEqually
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        return stackView
     }()
 
     override func viewDidLoad() {
@@ -65,51 +36,26 @@ extension ViewController {
     private func _setup() {
         _addSubviews()
         _setConstraints()
-        _addTargets()
-    }
-
-    private func _addTargets() {
-        _blockButton.addTarget(self, action: #selector(_tappedBlockButton), for: .touchUpInside)
-        _releaseButton.addTarget(self, action: #selector(_tappedReleaseButton), for: .touchUpInside)
     }
 
     private func _addSubviews() {
-        _buttonStackView.addArrangedSubview(_blockButton)
-        _buttonStackView.addArrangedSubview(_releaseButton)
-        view.addSubview(_buttonStackView)
         addChild(_contentView)
         view.addSubview(_contentView.view)
     }
 
     private func _setConstraints() {
-
         _contentView.view.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             _contentView.view.topAnchor.constraint(equalTo: view.topAnchor),
             _contentView.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             _contentView.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            _contentView.view.bottomAnchor.constraint(equalTo: _blockButton.topAnchor)
-        ])
-
-        NSLayoutConstraint.activate([
-            _buttonStackView.topAnchor.constraint(equalTo: view.bottomAnchor, constant: -160),
-            _buttonStackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 60),
-            _buttonStackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -60),
-            _buttonStackView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -60)
+            _contentView.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
 }
 
 // MARK: - Actions
 extension ViewController {
-    @objc private func _tappedBlockButton() {
-        _appBlocker.startBlockingTimer()
-    }
-    
-    @objc private func _tappedReleaseButton() {
-        print("Unblocking")
-        _appBlocker.unblockAllApps()
-    }
     
     private func _requestAuthorization() {
         Task {
