@@ -111,7 +111,8 @@ class AppBlocker: ObservableObject {
     func unblockTemp() {
         store.shield.applications = []
         
-        self.scheduleBlockTimer(after: 30)
+        // Unblock after 10s
+        self.scheduleBlockTimer(after: 10)
     }
     
     // Enum for error handling

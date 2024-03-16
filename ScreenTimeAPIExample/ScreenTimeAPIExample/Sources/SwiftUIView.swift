@@ -31,9 +31,13 @@ struct SwiftUIView: View {
     @State private var blockEndHourText: String = ""
     @State private var blockEndMinuteText: String = ""
     
+    @State var blockStart = Calendar.current.date(bySettingHour: 0, minute: 0, second: 0, of: Date())!
+    @State var blockEnd = Calendar.current.date(bySettingHour: 1, minute: 0, second: 0, of: Date())!
+        
     var body: some View {
         DismissKeyboardWrapper {
             VStack {
+                
                 Button(action: { isPresented.toggle() }) {
                     Text("Check the list of blocked apps")
                         .foregroundColor(.white)
@@ -48,107 +52,108 @@ struct SwiftUIView: View {
                         .cornerRadius(8)
                 }
                 .familyActivityPicker(isPresented: $isPresented, selection: $model.newSelection)
-                
                 VStack {
+                    Grid {
+                        GridRow {
+                            HStack {
+                                Text("Start:")
+                                DatePicker("", selection: $blockStart, displayedComponents: .hourAndMinute)
+                                    .labelsHidden()
+                                    .datePickerStyle(DefaultDatePickerStyle())
+                                    .frame(width: 150)
+                            }
+                        }
+                        Divider().gridCellUnsizedAxes(.horizontal)
+                        GridRow {
+                            HStack {
+                                Text("End:")
+                                DatePicker("", selection: $blockEnd, displayedComponents: .hourAndMinute)
+                                    .labelsHidden()
+                                    .datePickerStyle(DefaultDatePickerStyle())
+                                    .frame(width: 150)
+                            }
+                        }
+                    }
+                    Spacer()
                     HStack {
-                        Text("Start:")
-                        TextField("HH", text: $blockStartHourText)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .keyboardType(.numberPad)
-                            .frame(width: 50) // Adjust the width as needed
-                        Text(":")
-                        TextField("MM", text: $blockStartMinuteText)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .keyboardType(.numberPad)
-                            .frame(width: 50) // Adjust the width as needed
+                        // Button to start blocking
+                        Button(action: { startBlocking() }) {
+                            Text("Start Blocking")
+                                .foregroundColor(.white)
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 24)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(LinearGradient(gradient: Gradient(colors: [Color.red, Color.orange]), startPoint: .leading, endPoint: .trailing))
+                                        .shadow(color: Color.black.opacity(0.3), radius: 5, x: 0, y: 2)
+                                )
+                                .font(.system(size: 18, weight: .bold))
+                                .cornerRadius(8)
+                        }
                     }
                     HStack {
-                        Text("End:")
-                        TextField("HH", text: $blockEndHourText)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .keyboardType(.numberPad)
-                            .frame(width: 50) // Adjust the width as needed
-                        Text(":")
-                        TextField("MM", text: $blockEndMinuteText)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .keyboardType(.numberPad)
-                            .frame(width: 50) // Adjust the width as needed
-                    }
-                    // Button to start blocking
-                    Button(action: { startBlocking() }) {
-                        Text("Start Blocking")
-                            .foregroundColor(.white)
-                            .padding(.vertical, 12)
-                            .padding(.horizontal, 24)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.purple]), startPoint: .leading, endPoint: .trailing))
-                                    .shadow(color: Color.black.opacity(0.3), radius: 5, x: 0, y: 2)
-                            )
-                            .font(.system(size: 18, weight: .bold))
-                            .cornerRadius(8)
-                    }
-                    Button(action: { unblockAll() }) {
-                        Text("Unblock All")
-                            .foregroundColor(.white)
-                            .padding(.vertical, 12)
-                            .padding(.horizontal, 24)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.purple]), startPoint: .leading, endPoint: .trailing))
-                                    .shadow(color: Color.black.opacity(0.3), radius: 5, x: 0, y: 2)
-                            )
-                            .font(.system(size: 18, weight: .bold))
-                            .cornerRadius(8)
-                    }
-                    Button(action: { unblockTemp() }) {
-                        Text("Unblock 1 Minute")
-                            .foregroundColor(.white)
-                            .padding(.vertical, 12)
-                            .padding(.horizontal, 24)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.purple]), startPoint: .leading, endPoint: .trailing))
-                                    .shadow(color: Color.black.opacity(0.3), radius: 5, x: 0, y: 2)
-                            )
-                            .font(.system(size: 18, weight: .bold))
-                            .cornerRadius(8)
+                        Button(action: { unblockAll() }) {
+                         Text("Unblock All")
+                         .foregroundColor(.white)
+                         .padding(.vertical, 12)
+                         .padding(.horizontal, 24)
+                         .background(
+                         RoundedRectangle(cornerRadius: 8)
+                         .fill(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.black]), startPoint: .leading, endPoint: .trailing))
+                         .shadow(color: Color.black.opacity(0.3), radius: 5, x: 0, y: 2)
+                         )
+                         .font(.system(size: 18, weight: .bold))
+                         .cornerRadius(8)
+                         }
+                        Button(action: { unblockTemp() }) {
+                            Text("Unblock 10s")
+                                .foregroundColor(.white)
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 24)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.black]), startPoint: .leading, endPoint: .trailing))
+                                        .shadow(color: Color.black.opacity(0.3), radius: 5, x: 0, y: 2)
+                                )
+                                .font(.system(size: 18, weight: .bold))
+                                .cornerRadius(8)
+                        }
                     }
                 }
-                .padding()
             }
         }
         .onAppear {
-            // Update blockStartHour and blockStartMinute every minute
             let calendar = Calendar.current
             let currentDate = Date()
-            let components = calendar.dateComponents([.hour, .minute], from: currentDate)
-            if let currentHour = components.hour, let currentMinute = components.minute {
-                blockStartHour = currentHour
-                blockStartMinute = currentMinute
-                blockStartHourText = String(currentHour)
-                blockStartMinuteText = String(currentMinute)
-            }
-                    
-            // Update blockEndHour and blockEndMinute every minute
+
+            // Set blockStart to the current time
+            blockStart = currentDate
+
+            // Update blockEnd to 10 minutes from the current time
             let plus10Minutes = calendar.date(byAdding: .minute, value: 10, to: currentDate) ?? currentDate
-            let endComponents = calendar.dateComponents([.hour, .minute], from: plus10Minutes)
-            if let endHour = endComponents.hour, let endMinute = endComponents.minute {
-                blockEndHour = endHour
-                blockEndMinute = endMinute
-                blockEndHourText = String(endHour)
-                blockEndMinuteText = String(endMinute)
-            }
+            blockEnd = plus10Minutes
         }
     }
     
-    // Function to start blocking with user-defined times
     private func startBlocking() {
-        let startHour = Int(blockStartHourText) ?? 0;
-        let startMinute = Int(blockStartMinuteText) ?? 0;
-        let endHour = Int(blockEndHourText) ?? 0;
-        let endMinute = Int(blockEndMinuteText) ?? 0;
-                    
+        // Extracting hour and minute components from blockStart and blockEnd
+        let calendar = Calendar.current
+        let startComponents = calendar.dateComponents([.hour, .minute], from: blockStart)
+        let endComponents = calendar.dateComponents([.hour, .minute], from: blockEnd)
+        
+        // Extracting hour and minute from components
+        let startHour = startComponents.hour ?? 0
+        let startMinute = startComponents.minute ?? 0
+        let endHour = endComponents.hour ?? 0
+        let endMinute = endComponents.minute ?? 0
+        
+        if endHour <= startHour {
+            if endMinute <= startMinute {
+                // Add code to validate here (add a banner)
+            }
+        }
+        
+        // Call startBlockingTimer with extracted values
         appBlocker.startBlockingTimer(
             blockStartHour: startHour,
             blockEndHour: endHour,
