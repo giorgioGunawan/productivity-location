@@ -109,7 +109,6 @@ struct SwiftUIView: View {
     
     // Function to start blocking with user-defined times
     private func startBlocking() {
-        print("START BLOCKING PRESSED")
         if let startHour = Int(blockStartHourText),
            let startMinute = Int(blockStartMinuteText),
            let endHour = Int(blockEndHourText),

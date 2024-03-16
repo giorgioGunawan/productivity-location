@@ -51,14 +51,7 @@ class AppBlocker: ObservableObject {
         let isInTimeRange = isCurrentTimeInBlockWindow(currentDate: currentDate, blockStartHour: blockStartHour, blockStartMinute: blockStartMinute, blockEndHour: blockEndHour, blockEndMinute: blockEndMinute)
 
         if (isInTimeRange) {
-            self.block { result in
-                switch result {
-                case .success:
-                    print("Blocking successful")
-                case .failure(let error):
-                    print("Blocking failed: \(error.localizedDescription)")
-                }
-            }
+            self.block { result in }
         } else {
             // Schedule the timer to start blocking at the next block schedule time
             timer = Timer.scheduledTimer(withTimeInterval: timeIntervalUntilBlock, repeats: false) { [weak self] _ in
@@ -102,10 +95,8 @@ class AppBlocker: ObservableObject {
     
     // Function to schedule unblock timer
     private func scheduleUnblockTimer(after timeInterval: TimeInterval) {
-        print(timeInterval)
         Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: false) { [weak self] _ in
             self?.unblockAllApps()
-            print("Unblocking successful")
         }
     }
 
@@ -143,20 +134,14 @@ class AppBlocker: ObservableObject {
         // This is because it'll lead to edge cases
         let blockEndTime = blockEndHour * 60 + blockEndMinute - 1
         let currentTime = currentHour * 60 + currentMinute
-        
-        print(blockEndTime)
-        
+            
         return currentTime >= blockStartTime && currentTime <= blockEndTime
     }
     
     func isCurrentTimeEqualToDateUpToMinute(_ date1: Date, _ date2: Date) -> Bool {
-        print(date1)
-        print(date2)
         let calendar = Calendar.current
         let components1 = calendar.dateComponents([.hour, .minute], from: date1)
         let components2 = calendar.dateComponents([.hour, .minute], from: date2)
-        print(components1)
-        print(components2)
         return components1 == components2
     }
 }
