@@ -65,9 +65,15 @@ class AppBlocker: ObservableObject {
                 self?.block(completion: { _ in })
             }
         }
-        
-        // Schedule timer to unblock app
-        scheduleUnblockTimer(after: timeIntervalUntilUnblock)
+    
+        // If current time is exactly the same as the schedule unblock end, schedule unblock for one minute extra
+        if isCurrentTimeEqualToDateUpToMinute(currentDate, nextBlockEndDate) {
+            // Dates are equal up to the minute
+            scheduleUnblockTimer(after: timeIntervalUntilUnblock + 60) // Adding one minute to the time interval
+        } else {
+            // Dates are not equal up to the minute
+            scheduleUnblockTimer(after: timeIntervalUntilUnblock)
+        }
     }
 
     // Blocking logic with time window
@@ -96,6 +102,7 @@ class AppBlocker: ObservableObject {
     
     // Function to schedule unblock timer
     private func scheduleUnblockTimer(after timeInterval: TimeInterval) {
+        print(timeInterval)
         Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: false) { [weak self] _ in
             self?.unblockAllApps()
             print("Unblocking successful")
@@ -116,7 +123,7 @@ class AppBlocker: ObservableObject {
     
     func isCurrentTimeInBlockWindow(currentDate: Date, blockStartHour: Int, blockStartMinute: Int, blockEndHour: Int, blockEndMinute: Int) -> Bool {
         // Get the current calendar and timezone
-        let calendar = Calendar.current
+        _ = Calendar.current
         let userTimeZone = TimeZone.current
         
         // Set the calendar's timezone
@@ -131,9 +138,25 @@ class AppBlocker: ObservableObject {
         
         // Check if the current time falls within the block window
         let blockStartTime = blockStartHour * 60 + blockStartMinute
-        let blockEndTime = blockEndHour * 60 + blockEndMinute
+        
+        // Block end time minus one minute so you CANNOT block on the same minute
+        // This is because it'll lead to edge cases
+        let blockEndTime = blockEndHour * 60 + blockEndMinute - 1
         let currentTime = currentHour * 60 + currentMinute
         
+        print(blockEndTime)
+        
         return currentTime >= blockStartTime && currentTime <= blockEndTime
+    }
+    
+    func isCurrentTimeEqualToDateUpToMinute(_ date1: Date, _ date2: Date) -> Bool {
+        print(date1)
+        print(date2)
+        let calendar = Calendar.current
+        let components1 = calendar.dateComponents([.hour, .minute], from: date1)
+        let components2 = calendar.dateComponents([.hour, .minute], from: date2)
+        print(components1)
+        print(components2)
+        return components1 == components2
     }
 }
