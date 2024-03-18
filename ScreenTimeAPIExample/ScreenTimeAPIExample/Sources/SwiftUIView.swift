@@ -33,19 +33,21 @@ struct SwiftUIView: View {
     
     @State var blockStart = Calendar.current.date(bySettingHour: 0, minute: 0, second: 0, of: Date())!
     @State var blockEnd = Calendar.current.date(bySettingHour: 1, minute: 0, second: 0, of: Date())!
-        
+    
+    @State var stepCount: String = "0" // Add stepCount
+
     var body: some View {
         DismissKeyboardWrapper {
             VStack {
                 
                 Button(action: { isPresented.toggle() }) {
-                    Text("Check the list of blocked apps")
+                    Text("Apps to Block")
                         .foregroundColor(.white)
                         .padding(.vertical, 12)
                         .padding(.horizontal, 24)
                         .background(
                             RoundedRectangle(cornerRadius: 8)
-                                .fill(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.purple]), startPoint: .leading, endPoint: .trailing))
+                                .fill(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.black]), startPoint: .leading, endPoint: .trailing))
                                 .shadow(color: Color.black.opacity(0.3), radius: 5, x: 0, y: 2)
                         )
                         .font(.system(size: 18, weight: .bold))
@@ -76,35 +78,6 @@ struct SwiftUIView: View {
                     }
                     Spacer()
                     HStack {
-                        // Button to start blocking
-                        Button(action: { startBlocking() }) {
-                            Text("Start Blocking")
-                                .foregroundColor(.white)
-                                .padding(.vertical, 12)
-                                .padding(.horizontal, 24)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(LinearGradient(gradient: Gradient(colors: [Color.red, Color.orange]), startPoint: .leading, endPoint: .trailing))
-                                        .shadow(color: Color.black.opacity(0.3), radius: 5, x: 0, y: 2)
-                                )
-                                .font(.system(size: 18, weight: .bold))
-                                .cornerRadius(8)
-                        }
-                    }
-                    HStack {
-                        Button(action: { unblockAll() }) {
-                         Text("Unblock All")
-                         .foregroundColor(.white)
-                         .padding(.vertical, 12)
-                         .padding(.horizontal, 24)
-                         .background(
-                         RoundedRectangle(cornerRadius: 8)
-                         .fill(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.black]), startPoint: .leading, endPoint: .trailing))
-                         .shadow(color: Color.black.opacity(0.3), radius: 5, x: 0, y: 2)
-                         )
-                         .font(.system(size: 18, weight: .bold))
-                         .cornerRadius(8)
-                         }
                         Button(action: { unblockTemp() }) {
                             Text("Unblock 10s")
                                 .foregroundColor(.white)
@@ -118,6 +91,37 @@ struct SwiftUIView: View {
                                 .font(.system(size: 18, weight: .bold))
                                 .cornerRadius(8)
                         }
+                        Text("Steps Count: \(self.stepCount)") // Display step count
+                        TextField("Steps Count", text: $stepCount)
+                    }
+                    HStack {
+                        // Button to start blocking
+                        Button(action: { startBlocking() }) {
+                            Text("Start Blocking")
+                                .foregroundColor(.white)
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 24)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.black]), startPoint: .leading, endPoint: .trailing))
+                                        .shadow(color: Color.black.opacity(0.3), radius: 5, x: 0, y: 2)
+                                )
+                                .font(.system(size: 18, weight: .bold))
+                                .cornerRadius(8)
+                        }
+                        Button(action: { unblockAll() }) {
+                             Text("Unblock All")
+                             .foregroundColor(.white)
+                             .padding(.vertical, 12)
+                             .padding(.horizontal, 24)
+                             .background(
+                             RoundedRectangle(cornerRadius: 8)
+                             .fill(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.black]), startPoint: .leading, endPoint: .trailing))
+                             .shadow(color: Color.black.opacity(0.3), radius: 5, x: 0, y: 2)
+                             )
+                             .font(.system(size: 18, weight: .bold))
+                             .cornerRadius(8)
+                         }
                     }
                 }
             }
@@ -132,6 +136,15 @@ struct SwiftUIView: View {
             // Update blockEnd to 10 minutes from the current time
             let plus10Minutes = calendar.date(byAdding: .minute, value: 10, to: currentDate) ?? currentDate
             blockEnd = plus10Minutes
+        }
+        .onReceive(appBlocker.$stepCount.receive(on: DispatchQueue.main)) { count in
+            // Update stepCount when received from AppBlocker on the main thread
+            
+            DispatchQueue.main.asyncAfter(deadline: .now()){
+                self.stepCount = String(count)
+                print("on receive")
+                print(self.stepCount)
+            }
         }
     }
     

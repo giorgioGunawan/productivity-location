@@ -1,6 +1,8 @@
 import Foundation
 import ManagedSettings
 import DeviceActivity
+import CoreMotion
+import Combine
 
 class AppBlocker: ObservableObject {
     
@@ -22,6 +24,8 @@ class AppBlocker: ObservableObject {
     
     // Initialize timer for blocking
     var timer: Timer?
+    
+    @Published var stepCount: Int = 0
 
     // Function to start the blocking timer
     func startBlockingTimer(blockStartHour: Int, blockEndHour: Int, blockStartMinute: Int, blockEndMinute: Int) {
@@ -109,10 +113,42 @@ class AppBlocker: ObservableObject {
     }
     
     func unblockTemp() {
+        startStepCounting()
+    }
+    
+    func startStepCounting() {
+        if CMPedometer.isStepCountingAvailable() {
+            let pedometer = CMPedometer()
+            pedometer.startUpdates(from: Date()) { pedometerData, error in
+                DispatchQueue.main.async { // Ensure updates are handled on the main thread
+                    guard let data = pedometerData, error == nil else {
+                        print("Error starting step counting: \(error?.localizedDescription ?? "Unknown error")")
+                        return
+                    }
+                    let steps = data.numberOfSteps.intValue
+                    print("Number of steps: \(steps)")
+                    print("Start")
+                    // Check if the user has walked 10 steps
+                    if steps >= 20 {
+                        // Unblock the applications
+                        self.unblockApplicationsTemporarily()
+                        // Stop step counting
+                        pedometer.stopUpdates()
+                    }
+                    // Publish the step count on the main thread
+                    self.stepCount = steps
+                }
+            }
+        } else {
+            print("Step counting not available on this device.")
+        }
+    }
+    
+    func unblockApplicationsTemporarily() {
+        print("in here now")
         store.shield.applications = []
-        
         // Unblock after 10s
-        self.scheduleBlockTimer(after: 10)
+        scheduleBlockTimer(after: 10)
     }
     
     // Enum for error handling
