@@ -129,11 +129,13 @@ class AppBlocker: ObservableObject {
                     print("Number of steps: \(steps)")
                     print("Start")
                     // Check if the user has walked 10 steps
-                    if steps >= 20 {
+                    if steps >= 15 {
                         // Unblock the applications
                         self.unblockApplicationsTemporarily()
                         // Stop step counting
                         pedometer.stopUpdates()
+                        
+                        return
                     }
                     // Publish the step count on the main thread
                     self.stepCount = steps
@@ -145,10 +147,10 @@ class AppBlocker: ObservableObject {
     }
     
     func unblockApplicationsTemporarily() {
-        print("in here now")
         store.shield.applications = []
-        // Unblock after 10s
-        scheduleBlockTimer(after: 10)
+        // Unblock after 5 minutes
+        scheduleBlockTimer(after: 300)
+        self.stepCount = 0
     }
     
     // Enum for error handling
