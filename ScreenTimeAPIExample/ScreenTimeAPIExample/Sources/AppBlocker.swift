@@ -128,8 +128,9 @@ class AppBlocker: ObservableObject {
                 self.stepCount = 0
             }
             
-            // Start counting steps
-            pedometer?.startUpdates(from: Date()) { [weak self] pedometerData, error in
+            let startTime = Date()
+            // Start counting steps with more frequent updates
+            pedometer?.startUpdates(from: startTime, withHandler: { [weak self] pedometerData, error in
                 guard let self = self else { return }
                 guard !self.hasReachedGoal else { return }
                 
@@ -147,7 +148,6 @@ class AppBlocker: ObservableObject {
                     self.stepCount = steps
                     print("Step count after update: \(self.stepCount)")
                     
-                    // Check if reached target
                     if steps >= 15 && !self.hasReachedGoal {
                         self.hasReachedGoal = true
                         self.pedometer?.stopUpdates()
@@ -157,7 +157,7 @@ class AppBlocker: ObservableObject {
                         }
                     }
                 }
-            }
+            })
         }
     }
     

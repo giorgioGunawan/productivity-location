@@ -52,6 +52,8 @@ struct SwiftUIView: View {
     
     @State private var currentSteps: Int = 0
     
+    @State private var showingCelebration = false
+    
     var view: some View {
             VStack {
                 // Apps List button
@@ -229,6 +231,15 @@ struct SwiftUIView: View {
         .onChange(of: appBlocker.stepCount) { newValue in
             print("View detected step count change: \(newValue)")
         }
+        .alert("Congratulations! 🎉", isPresented: $showingCelebration) {
+            Button("OK", role: .cancel) {
+                // Reset steps after celebration
+                appBlocker.stopStepCountUpdates()
+                appBlocker.unblockAllApps()
+            }
+        } message: {
+            Text("You've reached 15 steps! Your apps are now unblocked.")
+        }
     }
 
     var body: some View {
@@ -237,6 +248,10 @@ struct SwiftUIView: View {
                 print("Received new count in view: \(newCount)")
                 withAnimation {
                     currentSteps = newCount
+                    // Add celebration check
+                    if newCount >= 15 && !showingCelebration {
+                        showingCelebration = true
+                    }
                 }
             }
     }
