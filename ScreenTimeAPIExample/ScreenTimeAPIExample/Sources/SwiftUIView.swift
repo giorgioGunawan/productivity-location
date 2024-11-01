@@ -52,8 +52,7 @@ struct SwiftUIView: View {
     
     @State private var currentSteps: Int = 0
     
-    var body: some View {
-        DismissKeyboardWrapper {
+    var view: some View {
             VStack {
                 // Apps List button
                 HStack {
@@ -215,7 +214,6 @@ struct SwiftUIView: View {
                 }
                 .padding(.horizontal, 40)
                 .padding(.bottom, 30)
-            }
         }
         .onAppear {
             let calendar = Calendar.current
@@ -231,10 +229,16 @@ struct SwiftUIView: View {
         .onChange(of: appBlocker.stepCount) { newValue in
             print("View detected step count change: \(newValue)")
         }
-        .onReceive(appBlocker.$stepCount) { newCount in
-            print("Received new count in view: \(newCount)")
-            currentSteps = newCount
-        }
+    }
+
+    var body: some View {
+        view
+            .onReceive(appBlocker.$stepCount) { newCount in
+                print("Received new count in view: \(newCount)")
+                withAnimation {
+                    currentSteps = newCount
+                }
+            }
     }
     
     private func startBlocking() {
