@@ -39,6 +39,8 @@ struct SwiftUIView: View {
     @State private var blockEndHour: Int = 1
     @State private var blockEndMinute: Int = 0
     @StateObject var appBlocker = AppBlocker()
+
+    @State var gioStepCount: Int = 0
     
     @State private var blockStartHourText: String = ""
     @State private var blockStartMinuteText: String = ""
@@ -47,6 +49,8 @@ struct SwiftUIView: View {
     
     @State var blockStart = Calendar.current.date(bySettingHour: 0, minute: 0, second: 0, of: Date())!
     @State var blockEnd = Calendar.current.date(bySettingHour: 1, minute: 0, second: 0, of: Date())!
+    
+    @State private var currentSteps: Int = 0
     
     var body: some View {
         DismissKeyboardWrapper {
@@ -96,10 +100,9 @@ struct SwiftUIView: View {
                             .frame(width: 150, height: 150)
                         
                         VStack(spacing: 0) {
-                            Text("\(appBlocker.stepCount)")
+                            Text("\(currentSteps)")
                                 .font(.system(size: 48, weight: .bold))
                                 .foregroundColor(mainPurple)
-                                .id(appBlocker.stepCount)
                             Text("/ 15")
                                 .font(.system(size: 24, weight: .semibold))
                                 .foregroundColor(mainBlue)
@@ -227,6 +230,10 @@ struct SwiftUIView: View {
         }
         .onChange(of: appBlocker.stepCount) { newValue in
             print("View detected step count change: \(newValue)")
+        }
+        .onReceive(appBlocker.$stepCount) { newCount in
+            print("Received new count in view: \(newCount)")
+            currentSteps = newCount
         }
     }
     

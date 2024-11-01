@@ -20,6 +20,7 @@ class AppBlocker: ObservableObject {
         }
     }
     private var pedometer: CMPedometer?
+    private var hasReachedGoal: Bool = false
     
     init() {
         self.store = ManagedSettingsStore()
@@ -120,6 +121,7 @@ class AppBlocker: ObservableObject {
     }
     
     func unblockTemp() {
+        hasReachedGoal = false
         if CMPedometer.isStepCountingAvailable() {
             // Reset step count when starting
             DispatchQueue.main.async {
@@ -129,6 +131,7 @@ class AppBlocker: ObservableObject {
             // Start counting steps
             pedometer?.startUpdates(from: Date()) { [weak self] pedometerData, error in
                 guard let self = self else { return }
+                guard !self.hasReachedGoal else { return }
                 
                 guard let data = pedometerData, error == nil else {
                     print("Error: \(error?.localizedDescription ?? "Unknown error")")
@@ -140,13 +143,18 @@ class AppBlocker: ObservableObject {
                 
                 // Ensure UI update happens on main thread
                 DispatchQueue.main.async { [weak self] in
-                    self?.stepCount = steps
-                    print("Step count after update: \(self?.stepCount ?? 0)")
+                    guard let self = self else { return }
+                    self.stepCount = steps
+                    print("Step count after update: \(self.stepCount)")
                     
                     // Check if reached target
-                    if steps >= 15 {
-                        self?.pedometer?.stopUpdates()
-                        self?.unblockApplicationsTemporarily()
+                    if steps >= 15 && !self.hasReachedGoal {
+                        self.hasReachedGoal = true
+                        self.pedometer?.stopUpdates()
+                        // Show the final step count for a moment before unblocking
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            self.unblockApplicationsTemporarily()
+                        }
                     }
                 }
             }
@@ -185,9 +193,12 @@ class AppBlocker: ObservableObject {
     
     func unblockApplicationsTemporarily() {
         store.shield.applications = []
-        // Unblock after 5 minutes
+        // Schedule reblock after 5 minutes
         scheduleBlockTimer(after: 300)
-        self.stepCount = 0
+        // Reset step count after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            self.stepCount = 0
+        }
     }
     
     // Enum for error handling
@@ -233,6 +244,7 @@ class AppBlocker: ObservableObject {
     // Don't forget to clean up
     func stopStepCountUpdates() {
         pedometer?.stopUpdates()
+        hasReachedGoal = false
         DispatchQueue.main.async {
             self.stepCount = 0
         }
