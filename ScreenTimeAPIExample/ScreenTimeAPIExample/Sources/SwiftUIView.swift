@@ -7,6 +7,8 @@ struct DismissKeyboardWrapper<Content: View>: UIViewControllerRepresentable {
         DismissKeyboardViewController(rootView: content())
     }
 
+    
+    
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
 }
 
@@ -18,10 +20,18 @@ class DismissKeyboardViewController<Content: View>: UIHostingController<Content>
 
 struct SwiftUIView: View {
     // Add these color constants at the top of the view
-    private let mainPurple = Color(red: 125/255, green: 74/255, blue: 255/255) // Bright purple
-    private let secondaryPurple = Color(red: 147/255, green: 103/255, blue: 255/255) // Lighter purple
-    private let dangerPurple = Color(red: 173/255, green: 66/255, blue: 245/255) // Slightly redder purple
-
+    private let mainGradient = LinearGradient(
+        gradient: Gradient(colors: [
+            Color(red: 125/255, green: 74/255, blue: 255/255),  // Purple
+            Color(red: 64/255, green: 93/255, blue: 230/255)    // Blue
+        ]),
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    private let mainPurple = Color(red: 125/255, green: 74/255, blue: 255/255)
+    private let mainBlue = Color(red: 64/255, green: 93/255, blue: 230/255)
+    
     @EnvironmentObject var model: BlockingApplicationModel
     @State var isPresented = false
     @State private var blockStartHour: Int = 0
@@ -38,8 +48,6 @@ struct SwiftUIView: View {
     @State var blockStart = Calendar.current.date(bySettingHour: 0, minute: 0, second: 0, of: Date())!
     @State var blockEnd = Calendar.current.date(bySettingHour: 1, minute: 0, second: 0, of: Date())!
     
-    @State var stepCount: String = "0" // Add stepCount
-
     var body: some View {
         DismissKeyboardWrapper {
             VStack {
@@ -54,8 +62,8 @@ struct SwiftUIView: View {
                             .padding(.vertical, 12)
                             .background(
                                 RoundedRectangle(cornerRadius: 20)
-                                    .fill(mainPurple)
-                                    .shadow(color: mainPurple.opacity(0.5), radius: 10, x: 0, y: 5)
+                                    .fill(mainGradient)
+                                    .shadow(color: mainPurple.opacity(0.3), radius: 10, x: 0, y: 5)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 20)
@@ -76,20 +84,25 @@ struct SwiftUIView: View {
                     
                     ZStack {
                         Circle()
-                            .fill(mainPurple.opacity(0.1))
+                            .fill(LinearGradient(
+                                gradient: Gradient(colors: [mainPurple.opacity(0.1), mainBlue.opacity(0.1)]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
                             .frame(width: 150, height: 150)
                         
                         Circle()
-                            .stroke(mainPurple, lineWidth: 8)
+                            .stroke(mainGradient, lineWidth: 8)
                             .frame(width: 150, height: 150)
                         
                         VStack(spacing: 0) {
-                            Text(stepCount)
+                            Text("\(appBlocker.stepCount)")
                                 .font(.system(size: 48, weight: .bold))
                                 .foregroundColor(mainPurple)
+                                .id(appBlocker.stepCount)
                             Text("/ 15")
                                 .font(.system(size: 24, weight: .semibold))
-                                .foregroundColor(secondaryPurple)
+                                .foregroundColor(mainBlue)
                         }
                     }
                 }
@@ -121,12 +134,12 @@ struct SwiftUIView: View {
                     VStack(alignment: .center, spacing: 8) {
                         Text("End Time")
                             .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(mainPurple)
+                            .foregroundColor(mainBlue)
                         
                         DatePicker("", selection: $blockEnd, displayedComponents: .hourAndMinute)
                             .labelsHidden()
                             .frame(width: 100)
-                            .background(mainPurple.opacity(0.1))
+                            .background(mainBlue.opacity(0.1))
                             .cornerRadius(12)
                             .padding(.horizontal)
                     }
@@ -134,7 +147,7 @@ struct SwiftUIView: View {
                     .background(
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color.white)
-                            .shadow(color: mainPurple.opacity(0.2), radius: 10, x: 0, y: 5)
+                            .shadow(color: mainBlue.opacity(0.2), radius: 10, x: 0, y: 5)
                     )
                 }
                 .padding(.horizontal)
@@ -152,7 +165,7 @@ struct SwiftUIView: View {
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 20)
-                                    .fill(mainPurple)
+                                    .fill(mainGradient)
                                     .shadow(color: mainPurple.opacity(0.5), radius: 8, x: 0, y: 4)
                             )
                             .overlay(
@@ -169,8 +182,9 @@ struct SwiftUIView: View {
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 20)
-                                    .fill(secondaryPurple)
-                                    .shadow(color: secondaryPurple.opacity(0.5), radius: 8, x: 0, y: 4)
+                                    .fill(mainGradient)
+                                    .opacity(0.8)
+                                    .shadow(color: mainPurple.opacity(0.5), radius: 8, x: 0, y: 4)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 20)
@@ -186,8 +200,9 @@ struct SwiftUIView: View {
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 20)
-                                    .fill(dangerPurple)
-                                    .shadow(color: dangerPurple.opacity(0.5), radius: 8, x: 0, y: 4)
+                                    .fill(mainGradient)
+                                    .opacity(0.6)
+                                    .shadow(color: mainPurple.opacity(0.5), radius: 8, x: 0, y: 4)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 20)
@@ -210,14 +225,8 @@ struct SwiftUIView: View {
             let plus10Minutes = calendar.date(byAdding: .minute, value: 10, to: currentDate) ?? currentDate
             blockEnd = plus10Minutes
         }
-        .onReceive(appBlocker.$stepCount.receive(on: DispatchQueue.main)) { count in
-            // Update stepCount when received from AppBlocker on the main thread
-            
-            DispatchQueue.main.asyncAfter(deadline: .now()){
-                self.stepCount = String(count)
-                print("on receive")
-                print(self.stepCount)
-            }
+        .onChange(of: appBlocker.stepCount) { newValue in
+            print("View detected step count change: \(newValue)")
         }
     }
     
@@ -249,11 +258,12 @@ struct SwiftUIView: View {
     }
     
     private func unblockAll() {
-        appBlocker.unblockAllApps();
+        appBlocker.stopStepCountUpdates()
+        appBlocker.unblockAllApps()
     }
     
     private func unblockTemp() {
-        appBlocker.unblockTemp();
+        appBlocker.unblockTemp()
     }
 }
 

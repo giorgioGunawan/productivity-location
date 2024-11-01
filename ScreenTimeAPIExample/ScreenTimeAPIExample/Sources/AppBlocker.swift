@@ -13,6 +13,14 @@ class AppBlocker: ObservableObject {
     var blockEndHour: Int
     var blockEndMinute: Int
     
+    @Published var stepCount: Int = 0 {
+        willSet {
+            // Debug print to verify the value is being updated
+            print("Updating stepCount to: \(newValue)")
+        }
+    }
+    private var pedometer: CMPedometer?
+    
     init() {
         self.store = ManagedSettingsStore()
         self.model = BlockingApplicationModel.shared
@@ -20,13 +28,12 @@ class AppBlocker: ObservableObject {
         self.blockStartMinute = 0
         self.blockEndHour = 0
         self.blockEndMinute = 0
+        self.pedometer = CMPedometer()
     }
     
     // Initialize timer for blocking
     var timer: Timer?
     
-    @Published var stepCount: Int = 0
-
     // Function to start the blocking timer
     func startBlockingTimer(blockStartHour: Int, blockEndHour: Int, blockStartMinute: Int, blockEndMinute: Int) {
         // Calculate the time interval until the next block schedule
@@ -113,7 +120,37 @@ class AppBlocker: ObservableObject {
     }
     
     func unblockTemp() {
-        startStepCounting()
+        if CMPedometer.isStepCountingAvailable() {
+            // Reset step count when starting
+            DispatchQueue.main.async {
+                self.stepCount = 0
+            }
+            
+            // Start counting steps
+            pedometer?.startUpdates(from: Date()) { [weak self] pedometerData, error in
+                guard let self = self else { return }
+                
+                guard let data = pedometerData, error == nil else {
+                    print("Error: \(error?.localizedDescription ?? "Unknown error")")
+                    return
+                }
+                
+                let steps = data.numberOfSteps.intValue
+                print("Raw steps from pedometer: \(steps)")
+                
+                // Ensure UI update happens on main thread
+                DispatchQueue.main.async { [weak self] in
+                    self?.stepCount = steps
+                    print("Step count after update: \(self?.stepCount ?? 0)")
+                    
+                    // Check if reached target
+                    if steps >= 15 {
+                        self?.pedometer?.stopUpdates()
+                        self?.unblockApplicationsTemporarily()
+                    }
+                }
+            }
+        }
     }
     
     func startStepCounting() {
@@ -191,5 +228,13 @@ class AppBlocker: ObservableObject {
         let components1 = calendar.dateComponents([.hour, .minute], from: date1)
         let components2 = calendar.dateComponents([.hour, .minute], from: date2)
         return components1 == components2
+    }
+
+    // Don't forget to clean up
+    func stopStepCountUpdates() {
+        pedometer?.stopUpdates()
+        DispatchQueue.main.async {
+            self.stepCount = 0
+        }
     }
 }
