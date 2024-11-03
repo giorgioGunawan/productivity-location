@@ -19,6 +19,11 @@ class AppBlocker: ObservableObject {
             print("Updating stepCount to: \(newValue)")
         }
     }
+    @Published var startedBlocking: Bool = false {
+        willSet {
+            print("Started blocking: \(newValue)")
+        }
+    }
     private var pedometer: CMPedometer?
     private var hasReachedGoal: Bool = false
     
@@ -67,6 +72,8 @@ class AppBlocker: ObservableObject {
         } else {
             scheduleBlockTimer(after: timeIntervalUntilBlock);
         }
+
+        self.startedBlocking = true
     
         // If current time is exactly the same as the schedule unblock end, schedule unblock for one minute extra
         if isCurrentTimeEqualToDateUpToMinute(currentDate, nextBlockEndDate) {
@@ -118,6 +125,7 @@ class AppBlocker: ObservableObject {
     // Function to unblock all apps
     func unblockAllApps() {
         store.shield.applications = []
+        self.startedBlocking = false
     }
     
     func unblockTemp() {

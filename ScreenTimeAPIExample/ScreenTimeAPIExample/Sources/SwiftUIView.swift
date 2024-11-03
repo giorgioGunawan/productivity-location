@@ -1,23 +1,5 @@
 import SwiftUI
 
-struct DismissKeyboardWrapper<Content: View>: UIViewControllerRepresentable {
-    var content: () -> Content
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        DismissKeyboardViewController(rootView: content())
-    }
-
-    
-    
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
-}
-
-class DismissKeyboardViewController<Content: View>: UIHostingController<Content> {
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        self.view.endEditing(true)
-    }
-}
-
 struct SwiftUIView: View {
     // Add these color constants at the top of the view
     private let mainGradient = LinearGradient(
@@ -34,10 +16,8 @@ struct SwiftUIView: View {
     
     @EnvironmentObject var model: BlockingApplicationModel
     @State var isPresented = false
-    @State private var blockStartHour: Int = 0
-    @State private var blockStartMinute: Int = 0
-    @State private var blockEndHour: Int = 1
-    @State private var blockEndMinute: Int = 0
+    @State private var blockHours: Int = 0
+    @State private var blockMinutes: Int = 10  // Default 10 minutes
     @StateObject var appBlocker = AppBlocker()
 
     @State var gioStepCount: Int = 0
@@ -46,9 +26,6 @@ struct SwiftUIView: View {
     @State private var blockStartMinuteText: String = ""
     @State private var blockEndHourText: String = ""
     @State private var blockEndMinuteText: String = ""
-    
-    @State var blockStart = Calendar.current.date(bySettingHour: 0, minute: 0, second: 0, of: Date())!
-    @State var blockEnd = Calendar.current.date(bySettingHour: 1, minute: 0, second: 0, of: Date())!
     
     @State private var currentSteps: Int = 0
     
@@ -114,18 +91,21 @@ struct SwiftUIView: View {
 
                 // Time selection area
                 HStack(spacing: 30) {
-                    // Start time
+                    // Hours picker
                     VStack(alignment: .center, spacing: 8) {
-                        Text("Start Time")
+                        Text("Hours")
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(mainPurple)
                         
-                        DatePicker("", selection: $blockStart, displayedComponents: .hourAndMinute)
-                            .labelsHidden()
-                            .frame(width: 100)
-                            .background(mainPurple.opacity(0.1))
-                            .cornerRadius(12)
-                            .padding(.horizontal)
+                        Picker("Hours", selection: $blockHours) {
+                            ForEach(0...23, id: \.self) { hour in
+                                Text("\(hour)").tag(hour)
+                            }
+                        }
+                        .frame(width: 100)
+                        .background(mainPurple.opacity(0.1))
+                        .cornerRadius(12)
+                        .padding(.horizontal)
                     }
                     .padding()
                     .background(
@@ -134,18 +114,21 @@ struct SwiftUIView: View {
                             .shadow(color: mainPurple.opacity(0.2), radius: 10, x: 0, y: 5)
                     )
                     
-                    // End time
+                    // Minutes picker
                     VStack(alignment: .center, spacing: 8) {
-                        Text("End Time")
+                        Text("Minutes")
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(mainBlue)
                         
-                        DatePicker("", selection: $blockEnd, displayedComponents: .hourAndMinute)
-                            .labelsHidden()
-                            .frame(width: 100)
-                            .background(mainBlue.opacity(0.1))
-                            .cornerRadius(12)
-                            .padding(.horizontal)
+                        Picker("Minutes", selection: $blockMinutes) {
+                            ForEach(0...59, id: \.self) { minute in
+                                Text("\(minute)").tag(minute)
+                            }
+                        }
+                        .frame(width: 100)
+                        .background(mainBlue.opacity(0.1))
+                        .cornerRadius(12)
+                        .padding(.horizontal)
                     }
                     .padding()
                     .background(
@@ -177,6 +160,8 @@ struct SwiftUIView: View {
                                     .stroke(Color.white, lineWidth: 2)
                             )
                     }
+                    .disabled(appBlocker.startedBlocking == true)
+                    .opacity(appBlocker.startedBlocking ? 0.3 : 1)
                     
                     Button(action: { unblockTemp() }) {
                         Text("Unblock 5 Minutes")
@@ -195,6 +180,8 @@ struct SwiftUIView: View {
                                     .stroke(Color.white, lineWidth: 2)
                             )
                     }
+                    .disabled(appBlocker.startedBlocking == false)
+                    .opacity(appBlocker.startedBlocking ? 1 : 0.3)
                     
                     Button(action: { unblockAll() }) {
                         Text("Unblock All")
@@ -213,23 +200,25 @@ struct SwiftUIView: View {
                                     .stroke(Color.white, lineWidth: 2)
                             )
                     }
+                    .disabled(appBlocker.startedBlocking == false)
+                    .opacity(appBlocker.startedBlocking ? 1 : 0.3)
                 }
                 .padding(.horizontal, 40)
                 .padding(.bottom, 30)
         }
-        .onAppear {
-            let calendar = Calendar.current
-            let currentDate = Date()
-
-            // Set blockStart to the current time
-            blockStart = currentDate
-
-            // Update blockEnd to 10 minutes from the current time
-            let plus10Minutes = calendar.date(byAdding: .minute, value: 10, to: currentDate) ?? currentDate
-            blockEnd = plus10Minutes
+        .onReceive(appBlocker.$stepCount) { newCount in
+            print("Received new count in view: \(newCount)")
+            withAnimation {
+                currentSteps = newCount
+                // Add celebration check
+                if newCount >= 15 && !showingCelebration {
+                    showingCelebration = true
+                }
+            }
         }
-        .onChange(of: appBlocker.stepCount) { newValue in
-            print("View detected step count change: \(newValue)")
+        .onChange(of: appBlocker.startedBlocking) { newValue in
+            print("View detected started blocking: \(newValue)")
+
         }
         .alert("Congratulations! 🎉", isPresented: $showingCelebration) {
             Button("OK", role: .cancel) {
@@ -257,29 +246,26 @@ struct SwiftUIView: View {
     }
     
     private func startBlocking() {
-        // Extracting hour and minute components from blockStart and blockEnd
+        // Don't allow 0 duration
+        guard blockHours > 0 || blockMinutes > 0 else { return }
+        
+        let currentDate = Date()
         let calendar = Calendar.current
-        let startComponents = calendar.dateComponents([.hour, .minute], from: blockStart)
-        let endComponents = calendar.dateComponents([.hour, .minute], from: blockEnd)
         
-        // Extracting hour and minute from components
-        let startHour = startComponents.hour ?? 0
-        let startMinute = startComponents.minute ?? 0
-        let endHour = endComponents.hour ?? 0
-        let endMinute = endComponents.minute ?? 0
-        
-        if endHour <= startHour {
-            if endMinute <= startMinute {
-                // Add code to validate here (add a banner)
-            }
+        // Calculate end time by adding hours and minutes to current time
+        guard let endDate = calendar.date(byAdding: .hour, value: blockHours, to: currentDate),
+              let finalEndDate = calendar.date(byAdding: .minute, value: blockMinutes, to: endDate) else {
+            return
         }
         
-        // Call startBlockingTimer with extracted values
+        let endComponents = calendar.dateComponents([.hour, .minute], from: finalEndDate)
+        let startComponents = calendar.dateComponents([.hour, .minute], from: currentDate)
+        
         appBlocker.startBlockingTimer(
-            blockStartHour: startHour,
-            blockEndHour: endHour,
-            blockStartMinute: startMinute,
-            blockEndMinute: endMinute
+            blockStartHour: startComponents.hour ?? 0,
+            blockEndHour: endComponents.hour ?? 0,
+            blockStartMinute: startComponents.minute ?? 0,
+            blockEndMinute: endComponents.minute ?? 0
         )
     }
     
@@ -290,11 +276,5 @@ struct SwiftUIView: View {
     
     private func unblockTemp() {
         appBlocker.unblockTemp()
-    }
-}
-
-struct SwiftUIView_Previews: PreviewProvider {
-    static var previews: some View {
-        SwiftUIView()
     }
 }
