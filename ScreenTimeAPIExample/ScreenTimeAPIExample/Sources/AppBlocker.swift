@@ -72,6 +72,8 @@ class AppBlocker: ObservableObject {
         self.blockEndHour = blockEndHour;
         self.blockStartMinute = blockStartMinute;
         self.blockEndMinute = blockEndMinute;
+
+        configureMonitorExtension()
         
         let isInTimeRange = isCurrentTimeInBlockWindow(currentDate: currentDate, blockStartHour: blockStartHour, blockStartMinute: blockStartMinute, blockEndHour: blockEndHour, blockEndMinute: blockEndMinute)
 
@@ -109,12 +111,21 @@ class AppBlocker: ObservableObject {
         )
         
         store.shield.applications = selectedAppTokens
+
+        configureMonitorExtension()
+
         do {
             try deviceActivityCenter.startMonitoring(DeviceActivityName.daily, during: blockSchedule)
             completion(.success(()))
         } catch {
             completion(.failure(error))
         }
+    }
+
+    func stopMonitoring() {
+        let deviceActivityCenter = DeviceActivityCenter()
+        deviceActivityCenter.stopMonitoring([.daily])
+        print("🛑 Stopped monitoring device activity")
     }
     
     // Function to schedule unblock timer
@@ -134,6 +145,24 @@ class AppBlocker: ObservableObject {
     func unblockAllApps() {
         store.shield.applications = []
         self.startedBlocking = false
+        stopMonitoring()
+    }
+
+    func configureMonitorExtension() {
+        let deviceActivityCenter = DeviceActivityCenter()
+        
+        let schedule = DeviceActivitySchedule(
+            intervalStart: DateComponents(hour: blockStartHour, minute: blockStartMinute),
+            intervalEnd: DateComponents(hour: blockEndHour, minute: blockEndMinute),
+            repeats: true
+        )
+        
+        do {
+            try deviceActivityCenter.startMonitoring(.daily, during: schedule)
+            print("🔄 Monitor extension configured for: \(blockStartHour):\(blockStartMinute) to \(blockEndHour):\(blockEndMinute)")
+        } catch {
+            print("❌ Failed to configure monitor extension: \(error)")
+        }
     }
     
     func unblockTemp() {
