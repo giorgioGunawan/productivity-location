@@ -3,9 +3,6 @@ import ManagedSettings
 import FamilyControls
 import Foundation
 
-// Make sure this matches your main app's extension name
-let extensionName: DeviceActivityName = .daily
-
 class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
