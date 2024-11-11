@@ -4,6 +4,10 @@ import DeviceActivity
 import CoreMotion
 import Combine
 
+extension DeviceActivityName {
+    static let daily = Self("daily")
+}
+
 class AppBlocker: ObservableObject {
     
     let store: ManagedSettingsStore
@@ -26,6 +30,10 @@ class AppBlocker: ObservableObject {
     }
     private var pedometer: CMPedometer?
     private var hasReachedGoal: Bool = false
+    
+    // Add schedule properties
+    @Published var isWithinSchedule: Bool = false
+    private var scheduleTimer: Timer?
     
     init() {
         self.store = ManagedSettingsStore()
@@ -217,29 +225,22 @@ class AppBlocker: ObservableObject {
     }
     
     func isCurrentTimeInBlockWindow(currentDate: Date, blockStartHour: Int, blockStartMinute: Int, blockEndHour: Int, blockEndMinute: Int) -> Bool {
-        // Get the current calendar and timezone
-        _ = Calendar.current
-        let userTimeZone = TimeZone.current
-        
-        // Set the calendar's timezone
-        var calendarWithTimeZone = Calendar.current
-        calendarWithTimeZone.timeZone = userTimeZone
-        
-        // Get the hour and minute components from the current date
-        let components = calendarWithTimeZone.dateComponents([.hour, .minute], from: currentDate)
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.hour, .minute], from: currentDate)
         guard let currentHour = components.hour, let currentMinute = components.minute else {
             return false
         }
         
-        // Check if the current time falls within the block window
-        let blockStartTime = blockStartHour * 60 + blockStartMinute
-        
-        // Block end time minus one minute so you CANNOT block on the same minute
-        // This is because it'll lead to edge cases
-        let blockEndTime = blockEndHour * 60 + blockEndMinute - 1
         let currentTime = currentHour * 60 + currentMinute
-            
-        return currentTime >= blockStartTime && currentTime <= blockEndTime
+        let startTime = blockStartHour * 60 + blockStartMinute
+        let endTime = blockEndHour * 60 + blockEndMinute
+        
+        // Handle overnight schedules (e.g., 23:00 to 06:00)
+        if endTime < startTime {
+            return currentTime >= startTime || currentTime <= endTime
+        } else {
+            return currentTime >= startTime && currentTime <= endTime
+        }
     }
     
     func isCurrentTimeEqualToDateUpToMinute(_ date1: Date, _ date2: Date) -> Bool {
@@ -256,5 +257,63 @@ class AppBlocker: ObservableObject {
         DispatchQueue.main.async {
             self.stepCount = 0
         }
+    }
+
+    // New function to start schedule
+    func startBlockingSchedule(scheduleStartHour: Int, scheduleStartMinute: Int, 
+                             scheduleEndHour: Int, scheduleEndMinute: Int) {
+        // Get selected app tokens
+        let selectedAppTokens = model.selectedAppsTokens
+        
+        // Set up DeviceActivityCenter
+        let deviceActivityCenter = DeviceActivityCenter()
+        
+        // Create the schedule components
+        var startComponents = DateComponents()
+        startComponents.hour = scheduleStartHour
+        startComponents.minute = scheduleStartMinute
+        
+        var endComponents = DateComponents()
+        endComponents.hour = scheduleEndHour
+        endComponents.minute = scheduleEndMinute
+        
+        // Check if we're currently within the schedule
+        let calendar = Calendar.current
+        let now = Date()
+        let currentComponents = calendar.dateComponents([.hour, .minute], from: now)
+        let currentTime = currentComponents.hour! * 60 + currentComponents.minute!
+        let startTime = scheduleStartHour * 60 + scheduleStartMinute
+        let endTime = scheduleEndHour * 60 + scheduleEndMinute
+        
+        let schedule = DeviceActivitySchedule(
+            intervalStart: startComponents,
+            intervalEnd: endComponents,
+            repeats: true
+        )
+        
+        do {
+            try deviceActivityCenter.startMonitoring(.daily, during: schedule)
+            
+            // If we're currently within the schedule, block immediately
+            if isCurrentTimeInBlockWindow(currentDate: now,
+                                        blockStartHour: scheduleStartHour,
+                                        blockStartMinute: scheduleStartMinute,
+                                        blockEndHour: scheduleEndHour,
+                                        blockEndMinute: scheduleEndMinute) {
+                store.shield.applications = selectedAppTokens
+            }
+            
+            self.startedBlocking = true
+            print("Schedule started: \(scheduleStartHour):\(scheduleStartMinute) to \(scheduleEndHour):\(scheduleEndMinute)")
+        } catch {
+            print("Failed to start monitoring: \(error)")
+        }
+    }
+
+    // Add cleanup for schedule
+    func stopSchedule() {
+        let deviceActivityCenter = DeviceActivityCenter()
+        deviceActivityCenter.stopMonitoring([.daily])
+        unblockAllApps()
     }
 }

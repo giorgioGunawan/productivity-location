@@ -16,16 +16,13 @@ struct SwiftUIView: View {
     
     @EnvironmentObject var model: BlockingApplicationModel
     @State var isPresented = false
-    @State private var blockHours: Int = 0
-    @State private var blockMinutes: Int = 10  // Default 10 minutes
+    @State private var scheduleStartHour: Int = 00  // Default 12 AM
+    @State private var scheduleStartMinute: Int = 0
+    @State private var scheduleEndHour: Int = 01    // Default 1 AM
+    @State private var scheduleEndMinute: Int = 0
     @StateObject var appBlocker = AppBlocker()
 
     @State var gioStepCount: Int = 0
-    
-    @State private var blockStartHourText: String = ""
-    @State private var blockStartMinuteText: String = ""
-    @State private var blockEndHourText: String = ""
-    @State private var blockEndMinuteText: String = ""
     
     @State private var currentSteps: Int = 0
     
@@ -90,22 +87,41 @@ struct SwiftUIView: View {
                 .padding(.bottom, 30)
 
                 // Time selection area
-                HStack(spacing: 30) {
-                    // Hours picker
-                    VStack(alignment: .center, spacing: 8) {
-                        Text("Hours")
+                VStack(spacing: 20) {
+                    Text("I want to block my apps between...")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(mainPurple)
+                        .padding(.bottom, 10)
+                    
+                    // Start Time
+                    HStack(spacing: 30) {
+                        Text("Start")
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(mainPurple)
+                            .frame(width: 70, alignment: .leading)
                         
-                        Picker("Hours", selection: $blockHours) {
-                            ForEach(0...23, id: \.self) { hour in
-                                Text("\(hour)").tag(hour)
+                        // Hours
+                        HStack {
+                            Picker("Start Hour", selection: $scheduleStartHour) {
+                                ForEach(0...23, id: \.self) { hour in
+                                    Text(String(format: "%02d", hour)).tag(hour)
+                                }
                             }
+                            .frame(width: 80)
+                            
+                            Text(":")
+                                .font(.system(size: 20, weight: .bold))
+                            
+                            // Minutes
+                            Picker("Start Minute", selection: $scheduleStartMinute) {
+                                ForEach(0...59, id: \.self) { minute in
+                                    Text(String(format: "%02d", minute)).tag(minute)
+                                }
+                            }
+                            .frame(width: 80)
                         }
-                        .frame(width: 100)
                         .background(mainPurple.opacity(0.1))
                         .cornerRadius(12)
-                        .padding(.horizontal)
                     }
                     .padding()
                     .background(
@@ -114,21 +130,35 @@ struct SwiftUIView: View {
                             .shadow(color: mainPurple.opacity(0.2), radius: 10, x: 0, y: 5)
                     )
                     
-                    // Minutes picker
-                    VStack(alignment: .center, spacing: 8) {
-                        Text("Minutes")
+                    // End Time
+                    HStack(spacing: 30) {
+                        Text("End")
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(mainBlue)
+                            .frame(width: 70, alignment: .leading)
                         
-                        Picker("Minutes", selection: $blockMinutes) {
-                            ForEach(0...59, id: \.self) { minute in
-                                Text("\(minute)").tag(minute)
+                        // Hours
+                        HStack {
+                            Picker("End Hour", selection: $scheduleEndHour) {
+                                ForEach(0...23, id: \.self) { hour in
+                                    Text(String(format: "%02d", hour)).tag(hour)
+                                }
                             }
+                            .frame(width: 80)
+                            
+                            Text(":")
+                                .font(.system(size: 20, weight: .bold))
+                            
+                            // Minutes
+                            Picker("End Minute", selection: $scheduleEndMinute) {
+                                ForEach(0...59, id: \.self) { minute in
+                                    Text(String(format: "%02d", minute)).tag(minute)
+                                }
+                            }
+                            .frame(width: 80)
                         }
-                        .frame(width: 100)
                         .background(mainBlue.opacity(0.1))
                         .cornerRadius(12)
-                        .padding(.horizontal)
                     }
                     .padding()
                     .background(
@@ -246,26 +276,11 @@ struct SwiftUIView: View {
     }
     
     private func startBlocking() {
-        // Don't allow 0 duration
-        guard blockHours > 0 || blockMinutes > 0 else { return }
-        
-        let currentDate = Date()
-        let calendar = Calendar.current
-        
-        // Calculate end time by adding hours and minutes to current time
-        guard let endDate = calendar.date(byAdding: .hour, value: blockHours, to: currentDate),
-              let finalEndDate = calendar.date(byAdding: .minute, value: blockMinutes, to: endDate) else {
-            return
-        }
-        
-        let endComponents = calendar.dateComponents([.hour, .minute], from: finalEndDate)
-        let startComponents = calendar.dateComponents([.hour, .minute], from: currentDate)
-        
-        appBlocker.startBlockingTimer(
-            blockStartHour: startComponents.hour ?? 0,
-            blockEndHour: endComponents.hour ?? 0,
-            blockStartMinute: startComponents.minute ?? 0,
-            blockEndMinute: endComponents.minute ?? 0
+        appBlocker.startBlockingSchedule(
+            scheduleStartHour: scheduleStartHour,
+            scheduleStartMinute: scheduleStartMinute,
+            scheduleEndHour: scheduleEndHour,
+            scheduleEndMinute: scheduleEndMinute
         )
     }
     

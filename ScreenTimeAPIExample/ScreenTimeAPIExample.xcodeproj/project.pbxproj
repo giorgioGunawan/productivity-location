@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -19,8 +19,11 @@
 		8F7DEE9229F680CF0017CD69 /* ScreenTimeAPIExampleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F7DEE9129F680CF0017CD69 /* ScreenTimeAPIExampleTests.swift */; };
 		8F7DEE9C29F680CF0017CD69 /* ScreenTimeAPIExampleUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F7DEE9B29F680CF0017CD69 /* ScreenTimeAPIExampleUITests.swift */; };
 		8F7DEE9E29F680CF0017CD69 /* ScreenTimeAPIExampleUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F7DEE9D29F680CF0017CD69 /* ScreenTimeAPIExampleUITestsLaunchTests.swift */; };
-		8F7DEEAE29F692920017CD69 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F7DEEAD29F692920017CD69 /* FamilyControls.framework */; };
-		8F7DEEB029F692A80017CD69 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F7DEEAF29F692A80017CD69 /* DeviceActivity.framework */; };
+		D037DE7A2CE2454F0073BD3B /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F7DEEAD29F692920017CD69 /* FamilyControls.framework */; };
+		D037DE7C2CE245DA0073BD3B /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F7DEEAF29F692A80017CD69 /* DeviceActivity.framework */; };
+		D03F73982CE24AB100553FBF /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F7DEEAF29F692A80017CD69 /* DeviceActivity.framework */; };
+		D03F739B2CE24AB100553FBF /* DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03F739A2CE24AB100553FBF /* DeviceActivityMonitorExtension.swift */; };
+		D03F73A02CE24AB100553FBF /* BlockingMonitorNew.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D03F73972CE24AB100553FBF /* BlockingMonitorNew.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D0F473872B9DE4EA000B08DD /* DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F473862B9DE4EA000B08DD /* DeviceActivityMonitorExtension.swift */; };
 		D0F4738C2B9DE4EA000B08DD /* productivityApp.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D0F473832B9DE4EA000B08DD /* productivityApp.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D0F473912B9DE74D000B08DD /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F7DEEAF29F692A80017CD69 /* DeviceActivity.framework */; };
@@ -44,6 +47,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 8F7DEE7629F680CC0017CD69;
 			remoteInfo = ScreenTimeAPIExample;
+		};
+		D03F739E2CE24AB100553FBF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F7DEE6F29F680CC0017CD69 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D03F73962CE24AB100553FBF;
+			remoteInfo = BlockingMonitorNew;
 		};
 		D0F4738A2B9DE4EA000B08DD /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -70,6 +80,7 @@
 			files = (
 				D0F4738C2B9DE4EA000B08DD /* productivityApp.appex in Embed Foundation Extensions */,
 				D0F473A22B9DE82C000B08DD /* shieldExtension.appex in Embed Foundation Extensions */,
+				D03F73A02CE24AB100553FBF /* BlockingMonitorNew.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -107,6 +118,10 @@
 		8F7DEE9D29F680CF0017CD69 /* ScreenTimeAPIExampleUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimeAPIExampleUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		8F7DEEAD29F692920017CD69 /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
 		8F7DEEAF29F692A80017CD69 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
+		D03F73972CE24AB100553FBF /* BlockingMonitorNew.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BlockingMonitorNew.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03F739A2CE24AB100553FBF /* DeviceActivityMonitorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceActivityMonitorExtension.swift; sourceTree = "<group>"; };
+		D03F739C2CE24AB100553FBF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D03F739D2CE24AB100553FBF /* BlockingMonitorNew.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BlockingMonitorNew.entitlements; sourceTree = "<group>"; };
 		D0F473832B9DE4EA000B08DD /* productivityApp.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = productivityApp.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0F473862B9DE4EA000B08DD /* DeviceActivityMonitorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceActivityMonitorExtension.swift; sourceTree = "<group>"; };
 		D0F473882B9DE4EA000B08DD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -123,8 +138,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8F7DEEAE29F692920017CD69 /* FamilyControls.framework in Frameworks */,
-				8F7DEEB029F692A80017CD69 /* DeviceActivity.framework in Frameworks */,
+				D037DE7A2CE2454F0073BD3B /* FamilyControls.framework in Frameworks */,
+				D037DE7C2CE245DA0073BD3B /* DeviceActivity.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -139,6 +154,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D03F73942CE24AB100553FBF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D03F73982CE24AB100553FBF /* DeviceActivity.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -168,7 +191,6 @@
 				8F56E03B29F7808A005ED24E /* SwiftUIView.swift */,
 				8F7092DD29F8FD450040955D /* Extensions.swift */,
 				8F7092E129F9567C0040955D /* AppBlocker.swift */,
-				8F7092E329F956BA0040955D /* BlockingApplicationModel.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -176,11 +198,13 @@
 		8F7DEE6E29F680CC0017CD69 = {
 			isa = PBXGroup;
 			children = (
+				D037DE752CE23E980073BD3B /* Shared */,
 				8F7DEE7929F680CC0017CD69 /* ScreenTimeAPIExample */,
 				8F7DEE9029F680CF0017CD69 /* ScreenTimeAPIExampleTests */,
 				8F7DEE9A29F680CF0017CD69 /* ScreenTimeAPIExampleUITests */,
 				D0F473852B9DE4EA000B08DD /* productivityApp */,
 				D0F4739B2B9DE82C000B08DD /* shieldExtension */,
+				D03F73992CE24AB100553FBF /* BlockingMonitorNew */,
 				8F7DEE7829F680CC0017CD69 /* Products */,
 				8F7DEEAC29F692920017CD69 /* Frameworks */,
 			);
@@ -194,6 +218,7 @@
 				8F7DEE9729F680CF0017CD69 /* ScreenTimeAPIExampleUITests.xctest */,
 				D0F473832B9DE4EA000B08DD /* productivityApp.appex */,
 				D0F473982B9DE82C000B08DD /* shieldExtension.appex */,
+				D03F73972CE24AB100553FBF /* BlockingMonitorNew.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -255,6 +280,24 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		D037DE752CE23E980073BD3B /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				8F7092E329F956BA0040955D /* BlockingApplicationModel.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		D03F73992CE24AB100553FBF /* BlockingMonitorNew */ = {
+			isa = PBXGroup;
+			children = (
+				D03F739A2CE24AB100553FBF /* DeviceActivityMonitorExtension.swift */,
+				D03F739C2CE24AB100553FBF /* Info.plist */,
+				D03F739D2CE24AB100553FBF /* BlockingMonitorNew.entitlements */,
+			);
+			path = BlockingMonitorNew;
+			sourceTree = "<group>";
+		};
 		D0F473852B9DE4EA000B08DD /* productivityApp */ = {
 			isa = PBXGroup;
 			children = (
@@ -292,6 +335,7 @@
 			dependencies = (
 				D0F4738B2B9DE4EA000B08DD /* PBXTargetDependency */,
 				D0F473A12B9DE82C000B08DD /* PBXTargetDependency */,
+				D03F739F2CE24AB100553FBF /* PBXTargetDependency */,
 			);
 			name = ScreenTimeAPIExample;
 			productName = ScreenTimeAPIExample;
@@ -333,6 +377,23 @@
 			productName = ScreenTimeAPIExampleUITests;
 			productReference = 8F7DEE9729F680CF0017CD69 /* ScreenTimeAPIExampleUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		D03F73962CE24AB100553FBF /* BlockingMonitorNew */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D03F73A12CE24AB100553FBF /* Build configuration list for PBXNativeTarget "BlockingMonitorNew" */;
+			buildPhases = (
+				D03F73932CE24AB100553FBF /* Sources */,
+				D03F73942CE24AB100553FBF /* Frameworks */,
+				D03F73952CE24AB100553FBF /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BlockingMonitorNew;
+			productName = BlockingMonitorNew;
+			productReference = D03F73972CE24AB100553FBF /* BlockingMonitorNew.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 		D0F473822B9DE4EA000B08DD /* productivityApp */ = {
 			isa = PBXNativeTarget;
@@ -390,6 +451,9 @@
 						CreatedOnToolsVersion = 14.2;
 						TestTargetID = 8F7DEE7629F680CC0017CD69;
 					};
+					D03F73962CE24AB100553FBF = {
+						CreatedOnToolsVersion = 15.2;
+					};
 					D0F473822B9DE4EA000B08DD = {
 						CreatedOnToolsVersion = 15.2;
 					};
@@ -399,7 +463,7 @@
 				};
 			};
 			buildConfigurationList = 8F7DEE7229F680CC0017CD69 /* Build configuration list for PBXProject "ScreenTimeAPIExample" */;
-			compatibilityVersion = "Xcode 14.0";
+			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -416,6 +480,7 @@
 				8F7DEE9629F680CF0017CD69 /* ScreenTimeAPIExampleUITests */,
 				D0F473822B9DE4EA000B08DD /* productivityApp */,
 				D0F473972B9DE82C000B08DD /* shieldExtension */,
+				D03F73962CE24AB100553FBF /* BlockingMonitorNew */,
 			);
 		};
 /* End PBXProject section */
@@ -438,6 +503,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		8F7DEE9529F680CF0017CD69 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D03F73952CE24AB100553FBF /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -492,6 +564,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D03F73932CE24AB100553FBF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D03F739B2CE24AB100553FBF /* DeviceActivityMonitorExtension.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D0F4737F2B9DE4EA000B08DD /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -520,6 +600,11 @@
 			isa = PBXTargetDependency;
 			target = 8F7DEE7629F680CC0017CD69 /* ScreenTimeAPIExample */;
 			targetProxy = 8F7DEE9829F680CF0017CD69 /* PBXContainerItemProxy */;
+		};
+		D03F739F2CE24AB100553FBF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D03F73962CE24AB100553FBF /* BlockingMonitorNew */;
+			targetProxy = D03F739E2CE24AB100553FBF /* PBXContainerItemProxy */;
 		};
 		D0F4738B2B9DE4EA000B08DD /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -803,6 +888,67 @@
 			};
 			name = Release;
 		};
+		D03F73A22CE24AB100553FBF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_ENTITLEMENTS = BlockingMonitorNew/BlockingMonitorNew.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 268AG44AZA;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BlockingMonitorNew/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = BlockingMonitorNew;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.productivityone.BlockingMonitorNew;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D03F73A32CE24AB100553FBF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_ENTITLEMENTS = BlockingMonitorNew/BlockingMonitorNew.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 268AG44AZA;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BlockingMonitorNew/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = BlockingMonitorNew;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.productivityone.BlockingMonitorNew;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		D0F4738E2B9DE4EA000B08DD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -960,6 +1106,15 @@
 			buildConfigurations = (
 				8F7DEEA829F680CF0017CD69 /* Debug */,
 				8F7DEEA929F680CF0017CD69 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D03F73A12CE24AB100553FBF /* Build configuration list for PBXNativeTarget "BlockingMonitorNew" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D03F73A22CE24AB100553FBF /* Debug */,
+				D03F73A32CE24AB100553FBF /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
