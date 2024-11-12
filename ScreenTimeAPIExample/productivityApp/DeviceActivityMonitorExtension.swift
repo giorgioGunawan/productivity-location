@@ -11,12 +11,6 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
         
-        // Add detailed logging
-        print("🔒 Monitor Extension: Blocking started")
-        print("Activity name: \(activity)")
-        print("Current time: \(Date())")
-        print("Selected apps: \(model.selectedAppsTokens)")
-        
         let tokens = loadSelectedAppTokens()
         print("🔒 Monitor Extension: Starting block with tokens: \(tokens)")
         store.shield.applications = tokens
@@ -30,8 +24,6 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         } else {
             print("❌ Failed to apply shield")
         }
-        
-        print("🔒 Monitor Extension: Blocking started at: \(Date())")
     }
     
     override func intervalDidEnd(for activity: DeviceActivityName) {
@@ -55,9 +47,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             print("Available keys in UserDefaults: \(groupUserDefaults.dictionaryRepresentation().keys)")
             return []
         }
-        
-        print("✅ Found encoded data: \(encodedData.count) bytes")
-        
+                
         do {
             let tokens = try JSONDecoder().decode(Set<ApplicationToken>.self, from: encodedData)
             print("✅ Successfully decoded tokens: \(tokens)")
