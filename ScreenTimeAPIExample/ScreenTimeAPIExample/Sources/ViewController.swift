@@ -61,8 +61,11 @@ extension ViewController {
         Task {
             do {
                 try await _center.requestAuthorization(for: .individual)
+                print("✅ Authorization successfully requested")
             } catch {
                 print(error.localizedDescription)
+                print("❌ Authorization request failed: \(error)")
+                print("Error details: \(error.localizedDescription)")
             }
         }
     }

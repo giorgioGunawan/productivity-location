@@ -21,6 +21,21 @@ struct SwiftUIView: View {
     @State private var scheduleEndHour: Int = 01    // Default 1 AM
     @State private var scheduleEndMinute: Int = 0
     @StateObject var appBlocker = AppBlocker()
+    
+    init() {
+        let calendar = Calendar.current
+        let now = Date()
+        let oneHourFromNow = calendar.date(byAdding: .hour, value: 1, to: now)!
+        
+        let nowComponents = calendar.dateComponents([.hour, .minute], from: now)
+        let laterComponents = calendar.dateComponents([.hour, .minute], from: oneHourFromNow)
+        
+        // Initialize the @State properties using _scheduleStartHour syntax
+        _scheduleStartHour = State(initialValue: nowComponents.hour ?? 0)
+        _scheduleStartMinute = State(initialValue: nowComponents.minute ?? 0)
+        _scheduleEndHour = State(initialValue: laterComponents.hour ?? 1)
+        _scheduleEndMinute = State(initialValue: laterComponents.minute ?? 0)
+    }
 
     @State var gioStepCount: Int = 0
     

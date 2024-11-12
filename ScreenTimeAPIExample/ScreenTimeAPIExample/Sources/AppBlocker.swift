@@ -97,6 +97,7 @@ class AppBlocker: ObservableObject {
 
     // Blocking logic with time window
     public func block(completion: @escaping (Result<Void, Error>) -> Void) {
+        print("🔒 Blocking apps...")
         // Get selected app tokens
         let selectedAppTokens = model.selectedAppsTokens
         
@@ -291,8 +292,11 @@ class AppBlocker: ObservableObject {
     // New function to start schedule
     func startBlockingSchedule(scheduleStartHour: Int, scheduleStartMinute: Int, 
                              scheduleEndHour: Int, scheduleEndMinute: Int) {
+        print("🔄 Starting blocking schedule...")
+        
         // Get selected app tokens
         let selectedAppTokens = model.selectedAppsTokens
+        print("📱 Selected apps: \(selectedAppTokens)")
         
         // Set up DeviceActivityCenter
         let deviceActivityCenter = DeviceActivityCenter()
@@ -306,6 +310,8 @@ class AppBlocker: ObservableObject {
         endComponents.hour = scheduleEndHour
         endComponents.minute = scheduleEndMinute
         
+        print("⏰ Schedule set for: \(scheduleStartHour):\(scheduleStartMinute) to \(scheduleEndHour):\(scheduleEndMinute)")
+        
         // Check if we're currently within the schedule
         let calendar = Calendar.current
         let now = Date()
@@ -313,7 +319,8 @@ class AppBlocker: ObservableObject {
         let currentTime = currentComponents.hour! * 60 + currentComponents.minute!
         let startTime = scheduleStartHour * 60 + scheduleStartMinute
         let endTime = scheduleEndHour * 60 + scheduleEndMinute
-        
+        print("🕐 Current time: \(currentComponents.hour!):\(currentComponents.minute!)")
+
         let schedule = DeviceActivitySchedule(
             intervalStart: startComponents,
             intervalEnd: endComponents,
@@ -322,6 +329,7 @@ class AppBlocker: ObservableObject {
         
         do {
             try deviceActivityCenter.startMonitoring(.daily, during: schedule)
+            print("✅ Monitoring started successfully")
             
             // If we're currently within the schedule, block immediately
             if isCurrentTimeInBlockWindow(currentDate: now,
@@ -329,7 +337,10 @@ class AppBlocker: ObservableObject {
                                         blockStartMinute: scheduleStartMinute,
                                         blockEndHour: scheduleEndHour,
                                         blockEndMinute: scheduleEndMinute) {
+                print("📱 Currently within block window - blocking apps immediately")
                 store.shield.applications = selectedAppTokens
+            } else {
+                print("⏳ Outside block window - waiting for scheduled time")
             }
             
             self.startedBlocking = true
