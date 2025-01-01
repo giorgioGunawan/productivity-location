@@ -144,13 +144,11 @@ final class ViewController: UIViewController {
         super.viewDidLoad()
         _setup()
         setupDebugTrigger()
+        
+        // Force dark mode
+        overrideUserInterfaceStyle = .dark
     }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        _requestAuthorization()
-    }
-
+    
     private func setupDebugTrigger() {
         view.addSubview(debugButton)
         debugButton.translatesAutoresizingMaskIntoConstraints = false
@@ -159,6 +157,35 @@ final class ViewController: UIViewController {
             debugButton.leftAnchor.constraint(equalTo: view.leftAnchor),
             debugButton.widthAnchor.constraint(equalToConstant: 60),
             debugButton.heightAnchor.constraint(equalToConstant: 60)
+        ])
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        _requestAuthorization()
+    }
+}
+
+// MARK: - Setup
+extension ViewController {
+    private func _setup() {
+        // Configure the hosting controller
+        _contentView.view.backgroundColor = .clear
+        _contentView.view.frame = view.bounds
+        _contentView.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        
+        // Add to view hierarchy
+        addChild(_contentView)
+        view.addSubview(_contentView.view)
+        _contentView.didMove(toParent: self)
+        
+        // Set up constraints
+        _contentView.view.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            _contentView.view.topAnchor.constraint(equalTo: view.topAnchor),
+            _contentView.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            _contentView.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            _contentView.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
     
@@ -183,29 +210,6 @@ final class ViewController: UIViewController {
                 .environmentObject(model)
             _contentView.rootView = AnyView(contentView)
         }
-    }
-}
-
-// MARK: - Setup
-extension ViewController {
-    private func _setup() {
-        _addSubviews()
-        _setConstraints()
-    }
-
-    private func _addSubviews() {
-        addChild(_contentView)
-        view.addSubview(_contentView.view)
-    }
-
-    private func _setConstraints() {
-        _contentView.view.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            _contentView.view.topAnchor.constraint(equalTo: view.topAnchor),
-            _contentView.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            _contentView.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            _contentView.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
     }
 }
 
