@@ -28,8 +28,7 @@ extension SceneDelegate {
         rootViewController: UIViewController
     ) {
         guard let window = window else { return }
-        window.backgroundColor = .white
-        window.overrideUserInterfaceStyle = .light
+        window.backgroundColor = .systemBackground
         window.rootViewController = rootViewController
         window.makeKeyAndVisible()
     }

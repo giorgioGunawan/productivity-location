@@ -48,17 +48,17 @@ struct SwiftUIView: View {
                 Button(action: { isPresented.toggle() }) {
                     Text("Apps List")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 12)
                         .background(
                             RoundedRectangle(cornerRadius: 20)
-                                .fill(mainGradient)
-                                .shadow(color: mainPurple.opacity(0.3), radius: 10, x: 0, y: 5)
+                                .fill(Color(.systemBackground))
+                                .shadow(color: Color(.systemGray4), radius: 10, x: 0, y: 5)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 20)
-                                .stroke(Color.white, lineWidth: 2)
+                                .stroke(Color(.systemGray3), lineWidth: 2)
                         )
                 }
                 .familyActivityPicker(isPresented: $isPresented, selection: $model.newSelection)
@@ -98,6 +98,7 @@ struct SwiftUIView: View {
                 }
             }
             .listStyle(InsetGroupedListStyle())
+            .background(Color(.systemBackground))
             
             // Steps Widget (only show when unblocking temporarily)
             if showingStepsWidget {
@@ -138,16 +139,16 @@ struct SwiftUIView: View {
                 Text("Add Schedule")
                     .frame(maxWidth: .infinity)
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .padding(.vertical, 16)
                     .background(
                         RoundedRectangle(cornerRadius: 20)
-                            .fill(mainGradient)
-                            .shadow(color: mainPurple.opacity(0.5), radius: 8, x: 0, y: 4)
+                            .fill(Color(.systemBackground))
+                            .shadow(color: Color(.systemGray4), radius: 8, x: 0, y: 4)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.white, lineWidth: 2)
+                            .stroke(Color(.systemGray3), lineWidth: 2)
                     )
             }
             .padding(.horizontal, 40)
@@ -197,6 +198,8 @@ struct SwiftUIView: View {
             .padding(.horizontal, 40)
             .padding(.bottom, 30)
         }
+        .background(Color(.systemBackground))
+        .preferredColorScheme(.dark)
         .sheet(isPresented: $showingAddSchedule) {
             NavigationView {
                 Form {
