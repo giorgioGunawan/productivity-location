@@ -13,16 +13,12 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         
         let tokens = loadSelectedAppTokens()
         print("🔒 Monitor Extension: Starting block with tokens: \(tokens)")
-        store.shield.applications = tokens
         
-        // Block apps when schedule starts
-        // store.shield.applications = model.selectedAppsTokens
-        
-        // Verify the shield was applied
-        if let shieldedApps = store.shield.applications {
-            print("✅ Shield applied successfully to \(shieldedApps.count) apps")
+        if !tokens.isEmpty {
+            store.shield.applications = tokens
+            print("🔒 Monitor Extension: Applied shield to \(tokens.count) apps")
         } else {
-            print("❌ Failed to apply shield")
+            print("⚠️ Monitor Extension: No apps to block")
         }
     }
     

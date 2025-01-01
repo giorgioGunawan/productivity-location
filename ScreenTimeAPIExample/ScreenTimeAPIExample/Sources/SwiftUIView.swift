@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SwiftUIView: View {
-    // Add these color constants at the top of the view
+    // Color constants
     private let mainGradient = LinearGradient(
         gradient: Gradient(colors: [
             Color(red: 125/255, green: 74/255, blue: 255/255),  // Purple
@@ -16,11 +16,16 @@ struct SwiftUIView: View {
     
     @EnvironmentObject var model: BlockingApplicationModel
     @State var isPresented = false
-    @State private var scheduleStartHour: Int = 00  // Default 12 AM
-    @State private var scheduleStartMinute: Int = 0
-    @State private var scheduleEndHour: Int = 01    // Default 1 AM
-    @State private var scheduleEndMinute: Int = 0
+    @State private var scheduleStartHour: Int
+    @State private var scheduleStartMinute: Int
+    @State private var scheduleEndHour: Int
+    @State private var scheduleEndMinute: Int
     @StateObject var appBlocker = AppBlocker()
+    
+    @State private var showingAddSchedule = false
+    @State private var currentSteps: Int = 0
+    @State private var showingCelebration = false
+    @State private var showingStepsWidget = false
     
     init() {
         let calendar = Calendar.current
@@ -30,47 +35,72 @@ struct SwiftUIView: View {
         let nowComponents = calendar.dateComponents([.hour, .minute], from: now)
         let laterComponents = calendar.dateComponents([.hour, .minute], from: oneHourFromNow)
         
-        // Initialize the @State properties using _scheduleStartHour syntax
         _scheduleStartHour = State(initialValue: nowComponents.hour ?? 0)
         _scheduleStartMinute = State(initialValue: nowComponents.minute ?? 0)
         _scheduleEndHour = State(initialValue: laterComponents.hour ?? 1)
         _scheduleEndMinute = State(initialValue: laterComponents.minute ?? 0)
     }
-
-    @State var gioStepCount: Int = 0
-    
-    @State private var currentSteps: Int = 0
-    
-    @State private var showingCelebration = false
-    
     var view: some View {
-            VStack {
-                // Apps List button
-                HStack {
-                    Spacer()
-                    Button(action: { isPresented.toggle() }) {
-                        Text("Apps List")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(mainGradient)
-                                    .shadow(color: mainPurple.opacity(0.3), radius: 10, x: 0, y: 5)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .stroke(Color.white, lineWidth: 2)
-                            )
-                    }
-                    .familyActivityPicker(isPresented: $isPresented, selection: $model.newSelection)
-                    .padding()
-                }
-
+        VStack {
+            // Apps List button
+            HStack {
                 Spacer()
-
-                // Steps counter
+                Button(action: { isPresented.toggle() }) {
+                    Text("Apps List")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(mainGradient)
+                                .shadow(color: mainPurple.opacity(0.3), radius: 10, x: 0, y: 5)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(Color.white, lineWidth: 2)
+                        )
+                }
+                .familyActivityPicker(isPresented: $isPresented, selection: $model.newSelection)
+                .padding()
+            }
+            
+            // Schedules List
+            List {
+                ForEach(model.schedules) { schedule in
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("Start: \(schedule.formattedStartTime())")
+                                .font(.system(size: 16, weight: .medium))
+                            Text("End: \(schedule.formattedEndTime())")
+                                .font(.system(size: 16, weight: .medium))
+                        }
+                        Spacer()
+                        if schedule.isActive {
+                            Text("Active")
+                                .foregroundColor(.green)
+                                .font(.system(size: 14, weight: .bold))
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+                .onDelete { indexSet in
+                    // Get the schedules that are being deleted
+                    let schedulesToDelete = indexSet.map { model.schedules[$0] }
+                    
+                    // Remove them from the model
+                    model.schedules.remove(atOffsets: indexSet)
+                    
+                    // Check each deleted schedule
+                    for deletedSchedule in schedulesToDelete {
+                        appBlocker.checkAndUnblockForDeletedSchedule(deletedSchedule)
+                    }
+                }
+            }
+            .listStyle(InsetGroupedListStyle())
+            
+            // Steps Widget (only show when unblocking temporarily)
+            if showingStepsWidget {
                 VStack(spacing: 8) {
                     Text("Steps Taken")
                         .font(.system(size: 24, weight: .bold))
@@ -99,175 +129,142 @@ struct SwiftUIView: View {
                         }
                     }
                 }
-                .padding(.bottom, 30)
-
-                // Time selection area
-                VStack(spacing: 20) {
-                    Text("I want to block my apps between...")
+                .padding()
+                .transition(.scale)
+            }
+            
+            // Add Schedule Button
+            Button(action: { showingAddSchedule = true }) {
+                Text("Add Schedule")
+                    .frame(maxWidth: .infinity)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(mainGradient)
+                            .shadow(color: mainPurple.opacity(0.5), radius: 8, x: 0, y: 4)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.white, lineWidth: 2)
+                    )
+            }
+            .padding(.horizontal, 40)
+            .padding(.vertical, 16)
+            // Action buttons
+            VStack(spacing: 16) {
+                Button(action: { unblockTemp() }) {
+                    Text("Unblock 5 Minutes")
+                        .frame(maxWidth: .infinity)
                         .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(mainPurple)
-                        .padding(.bottom, 10)
-                    
-                    // Start Time
-                    HStack(spacing: 30) {
-                        Text("Start")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(mainPurple)
-                            .frame(width: 70, alignment: .leading)
-                        
-                        // Hours
-                        HStack {
-                            Picker("Start Hour", selection: $scheduleStartHour) {
-                                ForEach(0...23, id: \.self) { hour in
-                                    Text(String(format: "%02d", hour)).tag(hour)
-                                }
-                            }
-                            .frame(width: 80)
-                            
-                            Text(":")
-                                .font(.system(size: 20, weight: .bold))
-                            
-                            // Minutes
-                            Picker("Start Minute", selection: $scheduleStartMinute) {
-                                ForEach(0...59, id: \.self) { minute in
-                                    Text(String(format: "%02d", minute)).tag(minute)
-                                }
-                            }
-                            .frame(width: 80)
-                        }
-                        .background(mainPurple.opacity(0.1))
-                        .cornerRadius(12)
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.white)
-                            .shadow(color: mainPurple.opacity(0.2), radius: 10, x: 0, y: 5)
-                    )
-                    
-                    // End Time
-                    HStack(spacing: 30) {
-                        Text("End")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(mainBlue)
-                            .frame(width: 70, alignment: .leading)
-                        
-                        // Hours
-                        HStack {
-                            Picker("End Hour", selection: $scheduleEndHour) {
-                                ForEach(0...23, id: \.self) { hour in
-                                    Text(String(format: "%02d", hour)).tag(hour)
-                                }
-                            }
-                            .frame(width: 80)
-                            
-                            Text(":")
-                                .font(.system(size: 20, weight: .bold))
-                            
-                            // Minutes
-                            Picker("End Minute", selection: $scheduleEndMinute) {
-                                ForEach(0...59, id: \.self) { minute in
-                                    Text(String(format: "%02d", minute)).tag(minute)
-                                }
-                            }
-                            .frame(width: 80)
-                        }
-                        .background(mainBlue.opacity(0.1))
-                        .cornerRadius(12)
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.white)
-                            .shadow(color: mainBlue.opacity(0.2), radius: 10, x: 0, y: 5)
-                    )
+                        .foregroundColor(.white)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(mainGradient)
+                                .opacity(0.8)
+                                .shadow(color: mainPurple.opacity(0.5), radius: 8, x: 0, y: 4)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(Color.white, lineWidth: 2)
+                        )
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 20)
-
-                Spacer()
-
-                // Action buttons
-                VStack(spacing: 16) {
-                    Button(action: { startBlocking() }) {
-                        Text("Start Blocking")
-                            .frame(maxWidth: .infinity)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.vertical, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(mainGradient)
-                                    .shadow(color: mainPurple.opacity(0.5), radius: 8, x: 0, y: 4)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .stroke(Color.white, lineWidth: 2)
-                            )
-                    }
-                    .disabled(appBlocker.startedBlocking == true)
-                    .opacity(appBlocker.startedBlocking ? 0.3 : 1)
-                    
-                    Button(action: { unblockTemp() }) {
-                        Text("Unblock 5 Minutes")
-                            .frame(maxWidth: .infinity)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.vertical, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(mainGradient)
-                                    .opacity(0.8)
-                                    .shadow(color: mainPurple.opacity(0.5), radius: 8, x: 0, y: 4)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .stroke(Color.white, lineWidth: 2)
-                            )
-                    }
-                    .disabled(appBlocker.startedBlocking == false)
-                    .opacity(appBlocker.startedBlocking ? 1 : 0.3)
-                    
-                    Button(action: { unblockAll() }) {
-                        Text("Unblock All")
-                            .frame(maxWidth: .infinity)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.vertical, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(mainGradient)
-                                    .opacity(0.6)
-                                    .shadow(color: mainPurple.opacity(0.5), radius: 8, x: 0, y: 4)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .stroke(Color.white, lineWidth: 2)
-                            )
-                    }
-                    .disabled(appBlocker.startedBlocking == false)
-                    .opacity(appBlocker.startedBlocking ? 1 : 0.3)
+                .disabled(appBlocker.startedBlocking == false)
+                .opacity(appBlocker.startedBlocking ? 1 : 0.3)
+                
+                Button(action: { unblockAll() }) {
+                    Text("Unblock All")
+                        .frame(maxWidth: .infinity)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(mainGradient)
+                                .opacity(0.6)
+                                .shadow(color: mainPurple.opacity(0.5), radius: 8, x: 0, y: 4)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(Color.white, lineWidth: 2)
+                        )
                 }
-                .padding(.horizontal, 40)
-                .padding(.bottom, 30)
+                .disabled(appBlocker.startedBlocking == false)
+                .opacity(appBlocker.startedBlocking ? 1 : 0.3)
+            }
+            .padding(.horizontal, 40)
+            .padding(.bottom, 30)
+        }
+        .sheet(isPresented: $showingAddSchedule) {
+            NavigationView {
+                Form {
+                    Section(header: Text("Start Time")) {
+                        HStack {
+                            Picker("Hour", selection: $scheduleStartHour) {
+                                ForEach(0...23, id: \.self) { hour in
+                                    Text(String(format: "%02d", hour))
+                                }
+                            }
+                            Text(":")
+                            Picker("Minute", selection: $scheduleStartMinute) {
+                                ForEach(0...59, id: \.self) { minute in
+                                    Text(String(format: "%02d", minute))
+                                }
+                            }
+                        }
+                    }
+                    
+                    Section(header: Text("End Time")) {
+                        HStack {
+                            Picker("Hour", selection: $scheduleEndHour) {
+                                ForEach(0...23, id: \.self) { hour in
+                                    Text(String(format: "%02d", hour))
+                                }
+                            }
+                            Text(":")
+                            Picker("Minute", selection: $scheduleEndMinute) {
+                                ForEach(0...59, id: \.self) { minute in
+                                    Text(String(format: "%02d", minute))
+                                }
+                            }
+                        }
+                    }
+                }
+                .navigationTitle("Add Schedule")
+                .navigationBarItems(
+                    leading: Button("Cancel") {
+                        showingAddSchedule = false
+                    },
+                    trailing: Button("Save") {
+                        let newSchedule = BlockSchedule(
+                            startHour: scheduleStartHour,
+                            startMinute: scheduleStartMinute,
+                            endHour: scheduleEndHour,
+                            endMinute: scheduleEndMinute
+                        )
+                        model.schedules.append(newSchedule)
+                        appBlocker.startBlockingSchedule(schedule: newSchedule)
+                        showingAddSchedule = false
+                    }
+                )
+            }
         }
         .onReceive(appBlocker.$stepCount) { newCount in
             print("Received new count in view: \(newCount)")
             withAnimation {
                 currentSteps = newCount
-                // Add celebration check
                 if newCount >= 15 && !showingCelebration {
                     showingCelebration = true
                 }
             }
         }
-        .onChange(of: appBlocker.startedBlocking) { newValue in
-            print("View detected started blocking: \(newValue)")
-
-        }
         .alert("Congratulations! 🎉", isPresented: $showingCelebration) {
             Button("OK", role: .cancel) {
-                // Reset steps after celebration
+                withAnimation {
+                    showingStepsWidget = false
+                }
                 appBlocker.stopStepCountUpdates()
                 appBlocker.unblockAllApps()
             }
@@ -278,33 +275,20 @@ struct SwiftUIView: View {
 
     var body: some View {
         view
-            .onReceive(appBlocker.$stepCount) { newCount in
-                print("Received new count in view: \(newCount)")
-                withAnimation {
-                    currentSteps = newCount
-                    // Add celebration check
-                    if newCount >= 15 && !showingCelebration {
-                        showingCelebration = true
-                    }
-                }
-            }
-    }
-    
-    private func startBlocking() {
-        appBlocker.startBlockingSchedule(
-            scheduleStartHour: scheduleStartHour,
-            scheduleStartMinute: scheduleStartMinute,
-            scheduleEndHour: scheduleEndHour,
-            scheduleEndMinute: scheduleEndMinute
-        )
-    }
-    
-    private func unblockAll() {
-        appBlocker.stopStepCountUpdates()
-        appBlocker.unblockAllApps()
     }
     
     private func unblockTemp() {
+        withAnimation {
+            showingStepsWidget = true
+        }
         appBlocker.unblockTemp()
+    }
+    
+    private func unblockAll() {
+        withAnimation {
+            showingStepsWidget = false
+        }
+        appBlocker.stopStepCountUpdates()
+        appBlocker.unblockAllApps()
     }
 }

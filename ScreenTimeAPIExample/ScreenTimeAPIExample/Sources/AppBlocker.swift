@@ -94,6 +94,76 @@ class AppBlocker: ObservableObject {
             scheduleUnblockTimer(after: timeIntervalUntilUnblock)
         }
     }
+    
+    func startBlockingSchedule(schedule: BlockSchedule) {
+        print("🔄 Starting blocking for schedule: \(schedule.formattedStartTime()) - \(schedule.formattedEndTime())")
+        
+        let deviceActivityCenter = DeviceActivityCenter()
+        
+        // Create the schedule components
+        var startComponents = DateComponents()
+        startComponents.hour = schedule.startHour
+        startComponents.minute = schedule.startMinute
+        
+        var endComponents = DateComponents()
+        endComponents.hour = schedule.endHour
+        endComponents.minute = schedule.endMinute
+        
+        let deviceSchedule = DeviceActivitySchedule(
+            intervalStart: startComponents,
+            intervalEnd: endComponents,
+            repeats: true
+        )
+        
+        do {
+            try deviceActivityCenter.startMonitoring(.daily, during: deviceSchedule)
+            
+            // If we're currently within the schedule, block immediately
+            if isCurrentTimeInBlockWindow(currentDate: Date(),
+                                        blockStartHour: schedule.startHour,
+                                        blockStartMinute: schedule.startMinute,
+                                        blockEndHour: schedule.endHour,
+                                        blockEndMinute: schedule.endMinute) {
+                print("📱 Currently within schedule window - blocking apps")
+                store.shield.applications = model.selectedAppsTokens
+            } else {
+                print("⏳ Outside schedule window - waiting for start time")
+            }
+            
+            self.startedBlocking = true
+            print("✅ Monitoring started successfully")
+        } catch {
+            print("❌ Failed to start monitoring: \(error)")
+        }
+    }
+    
+    // Add this function to enforce all active schedules
+    func enforceActiveSchedules() {
+        let now = Date()
+        var shouldBlock = false
+        
+        // Check if current time falls within any active schedule
+        for schedule in model.schedules where schedule.isActive {
+            if isCurrentTimeInBlockWindow(
+                currentDate: now,
+                blockStartHour: schedule.startHour,
+                blockStartMinute: schedule.startMinute,
+                blockEndHour: schedule.endHour,
+                blockEndMinute: schedule.endMinute
+            ) {
+                shouldBlock = true
+                break
+            }
+        }
+        
+        if shouldBlock {
+            store.shield.applications = model.selectedAppsTokens
+            startedBlocking = true
+        } else {
+            store.shield.applications = []
+            startedBlocking = false
+        }
+    }
 
     // Blocking logic with time window
     public func block(completion: @escaping (Result<Void, Error>) -> Void) {
@@ -120,6 +190,29 @@ class AppBlocker: ObservableObject {
             completion(.success(()))
         } catch {
             completion(.failure(error))
+        }
+    }
+    
+    func isCurrentTimeInBlockWindow(currentDate: Date,
+                                  blockStartHour: Int,
+                                  blockStartMinute: Int,
+                                  blockEndHour: Int,
+                                  blockEndMinute: Int) -> Bool {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.hour, .minute], from: currentDate)
+        guard let currentHour = components.hour,
+              let currentMinute = components.minute else {
+            return false
+        }
+        
+        let currentTime = currentHour * 60 + currentMinute
+        let startTime = blockStartHour * 60 + blockStartMinute
+        let endTime = blockEndHour * 60 + blockEndMinute
+        
+        if endTime < startTime {
+            return currentTime >= startTime || currentTime <= endTime
+        } else {
+            return currentTime >= startTime && currentTime <= endTime
         }
     }
 
@@ -254,6 +347,7 @@ class AppBlocker: ObservableObject {
         case invalidTimeZone
     }
     
+    /*
     func isCurrentTimeInBlockWindow(currentDate: Date, blockStartHour: Int, blockStartMinute: Int, blockEndHour: Int, blockEndMinute: Int) -> Bool {
         let calendar = Calendar.current
         let components = calendar.dateComponents([.hour, .minute], from: currentDate)
@@ -271,7 +365,7 @@ class AppBlocker: ObservableObject {
         } else {
             return currentTime >= startTime && currentTime <= endTime
         }
-    }
+    }*/
     
     func isCurrentTimeEqualToDateUpToMinute(_ date1: Date, _ date2: Date) -> Bool {
         let calendar = Calendar.current
@@ -355,5 +449,45 @@ class AppBlocker: ObservableObject {
         let deviceActivityCenter = DeviceActivityCenter()
         deviceActivityCenter.stopMonitoring([.daily])
         unblockAllApps()
+    }
+    
+    func checkAndUnblockForDeletedSchedule(_ deletedSchedule: BlockSchedule) {
+        print("🔄 Checking if deleted schedule was active...")
+        
+        // Check if the deleted schedule was currently active
+        let now = Date()
+        let wasActive = isCurrentTimeInBlockWindow(
+            currentDate: now,
+            blockStartHour: deletedSchedule.startHour,
+            blockStartMinute: deletedSchedule.startMinute,
+            blockEndHour: deletedSchedule.endHour,
+            blockEndMinute: deletedSchedule.endMinute
+        )
+        
+        if wasActive {
+            print("📱 Deleted schedule was active, checking other schedules...")
+            // Check if any other schedule is currently active
+            var shouldKeepBlocked = false
+            for schedule in model.schedules {
+                if isCurrentTimeInBlockWindow(
+                    currentDate: now,
+                    blockStartHour: schedule.startHour,
+                    blockStartMinute: schedule.startMinute,
+                    blockEndHour: schedule.endHour,
+                    blockEndMinute: schedule.endMinute
+                ) {
+                    shouldKeepBlocked = true
+                    break
+                }
+            }
+            
+            if !shouldKeepBlocked {
+                print("🔓 No other active schedules, unblocking apps")
+                store.shield.applications = []
+                startedBlocking = false
+            } else {
+                print("🔒 Other active schedules found, keeping apps blocked")
+            }
+        }
     }
 }

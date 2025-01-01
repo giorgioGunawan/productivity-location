@@ -4,66 +4,79 @@ import ManagedSettings
 
 final class BlockingApplicationModel: ObservableObject {
     static let shared = BlockingApplicationModel()
+    static let appGroupID = "group.com.productivityone.productivityApp"
     
     @Published var newSelection: FamilyActivitySelection = .init() {
         didSet {
-            print("🔄 Selection changed!")
-            print("New tokens: \(newSelection.applicationTokens)")
             saveSelectedAppTokens()
         }
     }
-    private let appGroupIdentifier = "group.com.productivityone.productivityApp" // Change this to match your app group ID
     
-    // Computed property to convert FamilyActivitySelection to a set of ApplicationToken
+    @Published var schedules: [BlockSchedule] = [] {
+        didSet {
+            saveSchedules()
+        }
+    }
+    
+    // Computed property for app tokens
     var selectedAppsTokens: Set<ApplicationToken> {
         newSelection.applicationTokens
     }
     
     private let selectedAppsKey = "SelectedAppsTokens"
+    private let schedulesKey = "SavedSchedules"
     
     private init() {
         loadSelectedAppTokens()
+        loadSchedules()
     }
     
-    // Function to save the selected app tokens to UserDefaults
+    // App tokens persistence
     private func saveSelectedAppTokens() {
-        print("⭐️ Starting saveSelectedAppTokens...")
-        guard let groupUserDefaults = UserDefaults(suiteName: appGroupIdentifier) else {
+        guard let groupUserDefaults = UserDefaults(suiteName: Self.appGroupID) else {
             print("❌ Failed to access App Group UserDefaults")
             return
         }
         
         do {
-            let tokens = newSelection.applicationTokens
-            print("📱 Tokens to save: \(tokens)")
-            let encodedData = try JSONEncoder().encode(tokens)
-            groupUserDefaults.set(encodedData, forKey: "SelectedAppsTokens")
+            let encodedData = try JSONEncoder().encode(selectedAppsTokens)
+            groupUserDefaults.set(encodedData, forKey: selectedAppsKey)
             groupUserDefaults.synchronize()
-            print("✅ Successfully saved tokens to shared storage")
-            
-            // Verify save
-            if let savedData = groupUserDefaults.data(forKey: "SelectedAppsTokens") {
-                print("✅ Verified data exists in UserDefaults")
-                print("Data size: \(savedData.count) bytes")
-            } else {
-                print("❌ WARNING: Data not found in UserDefaults after save")
-            }
+            print("✅ Saved tokens to shared storage: \(selectedAppsTokens)")
         } catch {
             print("❌ Failed to encode tokens: \(error)")
         }
     }
     
-    // Function to load the selected app tokens from UserDefaults
     private func loadSelectedAppTokens() {
-        guard let groupUserDefaults = UserDefaults(suiteName: appGroupIdentifier) else {
+        guard let groupUserDefaults = UserDefaults(suiteName: Self.appGroupID) else {
             print("❌ Failed to access App Group UserDefaults")
             return
         }
-                
-        if let encodedData = UserDefaults.standard.data(forKey: selectedAppsKey),
+        
+        if let encodedData = groupUserDefaults.data(forKey: selectedAppsKey),
            let tokens = try? JSONDecoder().decode(Set<ApplicationToken>.self, from: encodedData) {
-            newSelection.applicationTokens = tokens // Assign directly to newSelection.applicationTokens
-            print("📱 Loaded tokens from shared storage: \(tokens)")
+            newSelection.applicationTokens = tokens
+            print("✅ Loaded tokens from shared storage: \(tokens)")
+        }
+    }
+    
+    // Schedules persistence
+    private func saveSchedules() {
+        guard let groupUserDefaults = UserDefaults(suiteName: Self.appGroupID) else { return }
+        if let encoded = try? JSONEncoder().encode(schedules) {
+            groupUserDefaults.set(encoded, forKey: schedulesKey)
+            groupUserDefaults.synchronize()
+            print("✅ Saved schedules: \(schedules)")
+        }
+    }
+    
+    private func loadSchedules() {
+        guard let groupUserDefaults = UserDefaults(suiteName: Self.appGroupID) else { return }
+        if let data = groupUserDefaults.data(forKey: schedulesKey),
+           let decoded = try? JSONDecoder().decode([BlockSchedule].self, from: data) {
+            schedules = decoded
+            print("✅ Loaded schedules: \(decoded)")
         }
     }
 }
