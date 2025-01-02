@@ -1,6 +1,7 @@
 import UIKit
 import FamilyControls
 import SwiftUI
+import Combine
 
 // MARK: - Theme Colors
 private extension Color {
@@ -9,6 +10,7 @@ private extension Color {
 }
 
 // MARK: - Custom Styles
+// HEY AI, PLEASE DON'T REMOVE THIS STRUCT!!
 struct CustomTextFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
@@ -323,8 +325,7 @@ final class ViewController: UIViewController {
     var _center = AuthorizationCenter.shared
     @State private var _appBlocker = AppBlocker()
     private let onboardingModel = OnboardingModel()
-    private var debugTapCount = 0
-    private var lastTapTime: Date?
+    private var cancellables = Set<AnyCancellable>()
     
     private lazy var _contentView: UIHostingController<AnyView> = {
         let model = BlockingApplicationModel.shared
@@ -338,34 +339,66 @@ final class ViewController: UIViewController {
         super.viewDidLoad()
         _setup()
         setupDebugGesture()
+        setupOnboardingObserver()
         overrideUserInterfaceStyle = .dark
     }
-
+    
     private func setupDebugGesture() {
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(debugTapped))
-        tapGesture.numberOfTapsRequired = 1
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleDebugTap))
+        tapGesture.numberOfTapsRequired = 5
         view.addGestureRecognizer(tapGesture)
+        print("🔧 Debug gesture setup complete")
     }
     
-    @objc private func debugTapped() {
-        let currentTime = Date()
+    @objc private func handleDebugTap() {
+        print("🔧 Debug tap received")
+        onboardingModel.hasCompletedOnboarding = false
+        UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
         
-        if let lastTime = lastTapTime, currentTime.timeIntervalSince(lastTime) > 1.0 {
-            debugTapCount = 0
-        }
-        
-        debugTapCount += 1
-        lastTapTime = currentTime
-        
-        if debugTapCount >= 5 {
-            debugTapCount = 0
-            print("🔍 Debug: Resetting onboarding state")
-            onboardingModel.hasCompletedOnboarding = false
-            
-            // Update the view with new content
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
             let model = BlockingApplicationModel.shared
-            _contentView.rootView = AnyView(OnboardingView(onboardingModel: onboardingModel))
+            self._contentView.rootView = AnyView(OnboardingView(onboardingModel: self.onboardingModel))
+            print("🔧 Reset to onboarding view")
         }
+    }
+    
+    private func setupOnboardingObserver() {
+        print("🟣 Setting up onboarding observer")
+        
+        // Observe onboarding model changes
+        onboardingModel.objectWillChange
+            .sink { [weak self] _ in
+                print("🟣 OnboardingModel will change")
+                if self?.onboardingModel.hasCompletedOnboarding == true {
+                    print("🟣 hasCompletedOnboarding is true, updating view")
+                    self?.handleOnboardingCompleted()
+                }
+            }
+            .store(in: &cancellables)
+            
+        // Also observe notification
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleOnboardingCompleted),
+            name: NSNotification.Name("OnboardingCompleted"),
+            object: nil
+        )
+    }
+    
+    @objc private func handleOnboardingCompleted() {
+        print("🟣 Handling onboarding completion")
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            let model = BlockingApplicationModel.shared
+            let newView = SwiftUIView().environmentObject(model)
+            self._contentView.rootView = AnyView(newView)
+            print("🟣 Updated root view to SwiftUIView")
+        }
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 }
 
@@ -409,3 +442,6 @@ extension ViewController {
         }
     }
 }
+
+
+

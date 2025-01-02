@@ -3,7 +3,9 @@ import SwiftUI
 class OnboardingModel: ObservableObject {
     @Published var hasCompletedOnboarding: Bool {
         didSet {
+            print("🔴 hasCompletedOnboarding changed from \(oldValue) to \(hasCompletedOnboarding)")
             UserDefaults.standard.set(hasCompletedOnboarding, forKey: "hasCompletedOnboarding")
+            print("🔴 Saved to UserDefaults")
         }
     }
     @Published var userName: String = ""
