@@ -2,6 +2,30 @@ import UIKit
 import FamilyControls
 import SwiftUI
 
+// MARK: - Theme Colors
+private extension Color {
+    static let mainPurple = Color(red: 125/255, green: 74/255, blue: 255/255)
+    static let mainBlue = Color(red: 64/255, green: 93/255, blue: 230/255)
+}
+
+// MARK: - Custom Styles
+struct CustomTextFieldStyle: TextFieldStyle {
+    func _body(configuration: TextField<Self._Label>) -> some View {
+        configuration
+            .padding(.vertical, 16)
+            .padding(.horizontal, 20)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white.opacity(0.15))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+            )
+            .foregroundColor(.white)
+    }
+}
+
 // MARK: - OnboardingModel
 class OnboardingModel: ObservableObject {
     @Published var hasCompletedOnboarding: Bool {
@@ -30,59 +54,248 @@ struct OnboardingView: View {
     @State private var currentPage = 0
     
     var body: some View {
-        TabView(selection: $currentPage) {
-            // Welcome Page
-            WelcomePage(userName: $onboardingModel.userName)
+        ZStack {
+            // Beautiful gradient background
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.mainPurple.opacity(0.8),
+                    Color.mainBlue.opacity(0.6)
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
+            TabView(selection: $currentPage) {
+                // Welcome Page
+                WelcomePage(
+                    userName: $onboardingModel.userName,
+                    onNext: { withAnimation { currentPage = 1 } }
+                )
                 .tag(0)
-            
-            // Goals Page
-            GoalsPage(selectedGoal: $onboardingModel.selectedGoal)
+                
+                // Goals Page
+                GoalsPage(
+                    selectedGoal: $onboardingModel.selectedGoal,
+                    onNext: { withAnimation { currentPage = 2 } }
+                )
                 .tag(1)
-            
-            // Final Page
-            FinalPage(onboardingModel: onboardingModel)
-                .tag(2)
+                
+                // Final Page
+                FinalPage(onboardingModel: onboardingModel)
+                    .tag(2)
+            }
+            .tabViewStyle(PageTabViewStyle())
+            .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
         }
-        .tabViewStyle(PageTabViewStyle())
-        .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
     }
 }
 
 // MARK: - Onboarding Subviews
 struct WelcomePage: View {
     @Binding var userName: String
+    let onNext: () -> Void
     
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Welcome to PocketBlock")
-                .font(.system(size: 32, weight: .bold))
-                .multilineTextAlignment(.center)
+        VStack(spacing: 30) {
+            Spacer()
             
-            TextField("Your name", text: $userName)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding()
+            // Enhanced icon with animated gradient
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.mainPurple, Color.mainBlue]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 120, height: 120)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                    )
+                
+                Image(systemName: "shield.fill")
+                    .font(.system(size: 50))
+                    .foregroundColor(.white)
+            }
+            .shadow(color: Color.mainPurple.opacity(0.5), radius: 20)
             
-            Text("Swipe to continue →")
-                .foregroundColor(.secondary)
+            VStack(spacing: 12) {
+                Text("Welcome to")
+                    .font(.system(size: 24))
+                    .foregroundColor(.white.opacity(0.8))
+                Text("PocketBlock")
+                    .font(.system(size: 40, weight: .bold))
+                    .foregroundColor(.white)
+            }
+            .padding(.top, 30)
+            
+            Text("Your digital wellness companion")
+                .font(.system(size: 18))
+                .foregroundColor(.white.opacity(0.7))
+                .padding(.top, 8)
+            
+            // Enhanced text field
+            VStack(alignment: .leading, spacing: 8) {
+                Text("What's your name?")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white.opacity(0.8))
+                    .padding(.leading, 40)
+                
+                TextField("Enter your name", text: $userName)
+                    .textFieldStyle(CustomTextFieldStyle())
+                    .padding(.horizontal, 40)
+            }
+            .padding(.top, 40)
+            
+            Spacer()
+            
+            // Enhanced button with shadow and animation
+            Button(action: onNext) {
+                Text("Continue")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(Color.mainPurple)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.white)
+                    .cornerRadius(16)
+                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+            }
+            .padding(.horizontal, 40)
+            .padding(.bottom, 50)
         }
     }
 }
 
 struct GoalsPage: View {
     @Binding var selectedGoal: OnboardingModel.ProductivityGoal
+    let onNext: () -> Void
     
     var body: some View {
-        VStack(spacing: 20) {
-            Text("What's your main goal?")
-                .font(.system(size: 28, weight: .bold))
+        VStack(spacing: 25) {
+            Text("What's your focus?")
+                .font(.system(size: 32, weight: .bold))
+                .foregroundColor(.white)
+                .padding(.top, 60)
             
+            // Break down the goal selection into a separate view
+            GoalSelectionList(selectedGoal: $selectedGoal)
+            
+            Spacer()
+            
+            // Continue button
+            ContinueButton(action: onNext)
+        }
+    }
+}
+
+// Separate view for goal selection
+struct GoalSelectionList: View {
+    @Binding var selectedGoal: OnboardingModel.ProductivityGoal
+    
+    var body: some View {
+        VStack(spacing: 16) {
             ForEach(OnboardingModel.ProductivityGoal.allCases, id: \.self) { goal in
-                Button(action: { selectedGoal = goal }) {
-                    Text(goal.rawValue)
-                        .padding()
+                GoalSelectionRow(goal: goal, isSelected: selectedGoal == goal) {
+                    withAnimation(.spring()) {
+                        selectedGoal = goal
+                    }
                 }
             }
         }
+        .padding(.horizontal, 20)
+    }
+}
+
+// Individual goal row
+struct GoalSelectionRow: View {
+    let goal: OnboardingModel.ProductivityGoal
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 16) {
+                // Icon
+                Image(systemName: goalIcon(for: goal))
+                    .font(.system(size: 24))
+                    .foregroundColor(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Color.white.opacity(0.2))
+                    .clipShape(Circle())
+                
+                // Text
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(goal.rawValue)
+                        .font(.system(size: 18, weight: .semibold))
+                    Text(goalDescription(for: goal))
+                        .font(.system(size: 14))
+                        .opacity(0.8)
+                }
+                
+                Spacer()
+                
+                // Checkmark
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.white)
+                        .font(.system(size: 24))
+                }
+            }
+            .padding(.vertical, 16)
+            .padding(.horizontal, 20)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(isSelected ? Color.white.opacity(0.3) : Color.white.opacity(0.15))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? Color.white : Color.clear, lineWidth: 1)
+            )
+        }
+        .foregroundColor(.white)
+    }
+    
+    // Helper function for goal icons
+    private func goalIcon(for goal: OnboardingModel.ProductivityGoal) -> String {
+        switch goal {
+        case .focus: return "brain.head.profile"
+        case .social: return "person.2.fill"
+        case .gaming: return "gamecontroller.fill"
+        case .custom: return "slider.horizontal.3"
+        }
+    }
+    
+    // Helper function for goal descriptions
+    private func goalDescription(for goal: OnboardingModel.ProductivityGoal) -> String {
+        switch goal {
+        case .focus: return "Minimize distractions and stay focused"
+        case .social: return "Manage your social media usage"
+        case .gaming: return "Set healthy gaming boundaries"
+        case .custom: return "Create your own custom limits"
+        }
+    }
+}
+
+// Reusable continue button
+struct ContinueButton: View {
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text("Continue")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(Color.mainPurple)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Color.white)
+                .cornerRadius(16)
+                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+        }
+        .padding(.horizontal, 40)
+        .padding(.bottom, 50)
     }
 }
 
@@ -104,19 +317,6 @@ struct FinalPage: View {
     }
 }
 
-// MARK: - ContentView
-struct ContentView: View {
-    @ObservedObject var onboardingModel: OnboardingModel
-    
-    var body: some View {
-        if !onboardingModel.hasCompletedOnboarding {
-            OnboardingView(onboardingModel: onboardingModel)
-        } else {
-            SwiftUIView()
-        }
-    }
-}
-
 // MARK: - ViewController
 final class ViewController: UIViewController {
     var hostingController: UIHostingController<SwiftUIView>?
@@ -128,41 +328,44 @@ final class ViewController: UIViewController {
     
     private lazy var _contentView: UIHostingController<AnyView> = {
         let model = BlockingApplicationModel.shared
-        let contentView = ContentView(onboardingModel: onboardingModel)
-            .environmentObject(model)
-        return UIHostingController(rootView: AnyView(contentView))
-    }()
-
-    private lazy var debugButton: UIButton = {
-        let button = UIButton(frame: CGRect(x: 0, y: 0, width: 60, height: 60))
-        button.addTarget(self, action: #selector(debugTapped), for: .touchUpInside)
-        button.backgroundColor = .clear
-        return button
+        let view = onboardingModel.hasCompletedOnboarding ? 
+            AnyView(SwiftUIView().environmentObject(model)) :
+            AnyView(OnboardingView(onboardingModel: onboardingModel))
+        return UIHostingController(rootView: view)
     }()
 
     override func viewDidLoad() {
         super.viewDidLoad()
         _setup()
-        setupDebugTrigger()
-        
-        // Force dark mode
+        setupDebugGesture()
         overrideUserInterfaceStyle = .dark
     }
-    
-    private func setupDebugTrigger() {
-        view.addSubview(debugButton)
-        debugButton.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            debugButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            debugButton.leftAnchor.constraint(equalTo: view.leftAnchor),
-            debugButton.widthAnchor.constraint(equalToConstant: 60),
-            debugButton.heightAnchor.constraint(equalToConstant: 60)
-        ])
-    }
 
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        _requestAuthorization()
+    private func setupDebugGesture() {
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(debugTapped))
+        tapGesture.numberOfTapsRequired = 1
+        view.addGestureRecognizer(tapGesture)
+    }
+    
+    @objc private func debugTapped() {
+        let currentTime = Date()
+        
+        if let lastTime = lastTapTime, currentTime.timeIntervalSince(lastTime) > 1.0 {
+            debugTapCount = 0
+        }
+        
+        debugTapCount += 1
+        lastTapTime = currentTime
+        
+        if debugTapCount >= 5 {
+            debugTapCount = 0
+            print("🔍 Debug: Resetting onboarding state")
+            onboardingModel.hasCompletedOnboarding = false
+            
+            // Update the view with new content
+            let model = BlockingApplicationModel.shared
+            _contentView.rootView = AnyView(OnboardingView(onboardingModel: onboardingModel))
+        }
     }
 }
 
@@ -187,29 +390,6 @@ extension ViewController {
             _contentView.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             _contentView.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
-    }
-    
-    @objc private func debugTapped() {
-        let currentTime = Date()
-        
-        if let lastTime = lastTapTime, currentTime.timeIntervalSince(lastTime) > 1.0 {
-            debugTapCount = 0
-        }
-        
-        debugTapCount += 1
-        lastTapTime = currentTime
-        
-        if debugTapCount >= 5 {
-            debugTapCount = 0
-            print("🔍 Debug: Resetting onboarding state")
-            onboardingModel.hasCompletedOnboarding = false
-            
-            // Update the view with new content
-            let model = BlockingApplicationModel.shared
-            let contentView = ContentView(onboardingModel: onboardingModel)
-                .environmentObject(model)
-            _contentView.rootView = AnyView(contentView)
-        }
     }
 }
 
