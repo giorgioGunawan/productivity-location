@@ -174,26 +174,6 @@ struct SwiftUIView: View {
                 }
                 .disabled(appBlocker.startedBlocking == false)
                 .opacity(appBlocker.startedBlocking ? 1 : 0.3)
-                
-                Button(action: { unblockAll() }) {
-                    Text("Unblock All")
-                        .frame(maxWidth: .infinity)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.vertical, 16)
-                        .background(
-                            RoundedRectangle(cornerRadius: 20)
-                                .fill(mainGradient)
-                                .opacity(0.6)
-                                .shadow(color: mainPurple.opacity(0.5), radius: 8, x: 0, y: 4)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20)
-                                .stroke(Color.white, lineWidth: 2)
-                        )
-                }
-                .disabled(appBlocker.startedBlocking == false)
-                .opacity(appBlocker.startedBlocking ? 1 : 0.3)
             }
             .padding(.horizontal, 40)
             .padding(.bottom, 30)
@@ -285,13 +265,5 @@ struct SwiftUIView: View {
             showingStepsWidget = true
         }
         appBlocker.unblockTemp()
-    }
-    
-    private func unblockAll() {
-        withAnimation {
-            showingStepsWidget = false
-        }
-        appBlocker.stopStepCountUpdates()
-        appBlocker.unblockAllApps()
     }
 }

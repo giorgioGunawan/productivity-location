@@ -305,68 +305,16 @@ struct FinalPage: View {
     @ObservedObject var onboardingModel: OnboardingModel
     
     var body: some View {
-        VStack(spacing: 30) {
-            Spacer()
+        VStack(spacing: 20) {
+            Text("You're all set!")
+                .font(.system(size: 28, weight: .bold))
             
-            // Enhanced success animation
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color.mainPurple, Color.mainBlue]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 120, height: 120)
-                
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 50))
-                    .foregroundColor(.white)
-            }
-            .shadow(color: Color.mainPurple.opacity(0.5), radius: 20)
-            
-            VStack(spacing: 12) {
-                Text("You're all set!")
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundColor(.white)
-                
-                Text("Let's start your focus journey")
-                    .font(.system(size: 18))
-                    .foregroundColor(.white.opacity(0.8))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-            }
-            
-            Spacer()
-            
-            Button {
-                print("🔵 Get Started button tapped")
-                UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+            Button(action: {
                 onboardingModel.hasCompletedOnboarding = true
-                NotificationCenter.default.post(name: NSNotification.Name("OnboardingCompleted"), object: nil)
-            } label: {
-                HStack {
-                    Text("Get Started")
-                        .font(.system(size: 20, weight: .bold))
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 20, weight: .bold))
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 20)
-                .background(
-                    LinearGradient(
-                        gradient: Gradient(colors: [Color.mainPurple, Color.mainBlue]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .cornerRadius(20)
-                .shadow(color: Color.mainPurple.opacity(0.5), radius: 10, x: 0, y: 5)
+            }) {
+                Text("Get Started")
+                    .padding()
             }
-            .padding(.horizontal, 40)
-            .padding(.bottom, 50)
         }
     }
 }
@@ -404,15 +352,36 @@ final class ViewController: UIViewController {
     
     @objc private func handleDebugTap() {
         print("🔧 Debug tap received")
-        onboardingModel.hasCompletedOnboarding = false
-        UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
         
-        DispatchQueue.main.async { [weak self] in
+        let alert = UIAlertController(
+            title: "Debug Options",
+            message: "Choose an action",
+            preferredStyle: .actionSheet
+        )
+        
+        alert.addAction(UIAlertAction(title: "Restart Onboarding", style: .default) { [weak self] _ in
+            self?.onboardingModel.hasCompletedOnboarding = false
+            UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+            
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                let model = BlockingApplicationModel.shared
+                self._contentView.rootView = AnyView(OnboardingView(onboardingModel: self.onboardingModel))
+                print("🔧 Reset to onboarding view")
+            }
+        })
+        
+        alert.addAction(UIAlertAction(title: "Unblock All Apps", style: .default) { [weak self] _ in
             guard let self = self else { return }
             let model = BlockingApplicationModel.shared
-            self._contentView.rootView = AnyView(OnboardingView(onboardingModel: self.onboardingModel))
-            print("🔧 Reset to onboarding view")
-        }
+            let appBlocker = AppBlocker()
+            appBlocker.unblockAllApps()
+            print("🔧 Unblocked all apps")
+        })
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        present(alert, animated: true)
     }
     
     private func setupOnboardingObserver() {
