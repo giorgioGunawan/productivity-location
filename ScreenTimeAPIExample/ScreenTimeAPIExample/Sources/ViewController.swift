@@ -305,16 +305,68 @@ struct FinalPage: View {
     @ObservedObject var onboardingModel: OnboardingModel
     
     var body: some View {
-        VStack(spacing: 20) {
-            Text("You're all set!")
-                .font(.system(size: 28, weight: .bold))
+        VStack(spacing: 30) {
+            Spacer()
             
-            Button(action: {
-                onboardingModel.hasCompletedOnboarding = true
-            }) {
-                Text("Get Started")
-                    .padding()
+            // Enhanced success animation
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.mainPurple, Color.mainBlue]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 120, height: 120)
+                
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 50))
+                    .foregroundColor(.white)
             }
+            .shadow(color: Color.mainPurple.opacity(0.5), radius: 20)
+            
+            VStack(spacing: 12) {
+                Text("You're all set!")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.white)
+                
+                Text("Let's start your focus journey")
+                    .font(.system(size: 18))
+                    .foregroundColor(.white.opacity(0.8))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
+            
+            Spacer()
+            
+            Button {
+                print("🔵 Get Started button tapped")
+                UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+                onboardingModel.hasCompletedOnboarding = true
+                NotificationCenter.default.post(name: NSNotification.Name("OnboardingCompleted"), object: nil)
+            } label: {
+                HStack {
+                    Text("Get Started")
+                        .font(.system(size: 20, weight: .bold))
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 20, weight: .bold))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: [Color.mainPurple, Color.mainBlue]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .cornerRadius(20)
+                .shadow(color: Color.mainPurple.opacity(0.5), radius: 10, x: 0, y: 5)
+            }
+            .padding(.horizontal, 40)
+            .padding(.bottom, 50)
         }
     }
 }
