@@ -42,7 +42,6 @@ final class BlockingApplicationModel: ObservableObject {
             let encodedData = try JSONEncoder().encode(selectedAppsTokens)
             groupUserDefaults.set(encodedData, forKey: selectedAppsKey)
             groupUserDefaults.synchronize()
-            print("✅ Saved tokens to shared storage")
         } catch {
             print("❌ Failed to encode tokens: \(error)")
         }
