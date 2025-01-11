@@ -230,6 +230,7 @@ class AppBlocker: ObservableObject {
     }
     
     private func scheduleBlockTimer(after timeInterval: TimeInterval) {
+        print("Scheduling a timer block")
         Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: false) { [weak self] _ in
             self?.block(completion: { _ in})
         }
@@ -331,9 +332,10 @@ class AppBlocker: ObservableObject {
     }
     
     func unblockApplicationsTemporarily() {
+        print("🔓 Temporarily unblocking apps")
         store.shield.applications = []
-        // Schedule reblock after 5 minutes
-        scheduleBlockTimer(after: 300)
+        // Schedule reblock after 15 seconds
+        scheduleBlockTimer(after: 15)
         // Reset step count after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.stepCount = 0
@@ -390,7 +392,6 @@ class AppBlocker: ObservableObject {
         
         // Get selected app tokens
         let selectedAppTokens = model.selectedAppsTokens
-        print("📱 Selected apps: \(selectedAppTokens)")
         
         // Set up DeviceActivityCenter
         let deviceActivityCenter = DeviceActivityCenter()

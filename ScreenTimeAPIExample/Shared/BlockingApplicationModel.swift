@@ -42,7 +42,7 @@ final class BlockingApplicationModel: ObservableObject {
             let encodedData = try JSONEncoder().encode(selectedAppsTokens)
             groupUserDefaults.set(encodedData, forKey: selectedAppsKey)
             groupUserDefaults.synchronize()
-            print("✅ Saved tokens to shared storage: \(selectedAppsTokens)")
+            print("✅ Saved tokens to shared storage")
         } catch {
             print("❌ Failed to encode tokens: \(error)")
         }
@@ -57,7 +57,7 @@ final class BlockingApplicationModel: ObservableObject {
         if let encodedData = groupUserDefaults.data(forKey: selectedAppsKey),
            let tokens = try? JSONDecoder().decode(Set<ApplicationToken>.self, from: encodedData) {
             newSelection.applicationTokens = tokens
-            print("✅ Loaded tokens from shared storage: \(tokens)")
+            print("✅ Loaded tokens from shared storage")
         }
     }
     
@@ -67,7 +67,6 @@ final class BlockingApplicationModel: ObservableObject {
         if let encoded = try? JSONEncoder().encode(schedules) {
             groupUserDefaults.set(encoded, forKey: schedulesKey)
             groupUserDefaults.synchronize()
-            print("✅ Saved schedules: \(schedules)")
         }
     }
     
@@ -76,7 +75,6 @@ final class BlockingApplicationModel: ObservableObject {
         if let data = groupUserDefaults.data(forKey: schedulesKey),
            let decoded = try? JSONDecoder().decode([BlockSchedule].self, from: data) {
             schedules = decoded
-            print("✅ Loaded schedules: \(decoded)")
         }
     }
 }

@@ -323,7 +323,6 @@ struct FinalPage: View {
 final class ViewController: UIViewController {
     var hostingController: UIHostingController<SwiftUIView>?
     var _center = AuthorizationCenter.shared
-    @State private var _appBlocker = AppBlocker()
     private let onboardingModel = OnboardingModel()
     private var cancellables = Set<AnyCancellable>()
     
@@ -374,9 +373,17 @@ final class ViewController: UIViewController {
         alert.addAction(UIAlertAction(title: "Unblock All Apps", style: .default) { [weak self] _ in
             guard let self = self else { return }
             let model = BlockingApplicationModel.shared
-            let appBlocker = AppBlocker()
-            appBlocker.unblockAllApps()
+            model.appBlocker.unblockAllApps()
             print("🔧 Unblocked all apps")
+        })
+
+        alert.addAction(UIAlertAction(title: "Unblock 15 seconds", style: .default) { [weak self] _ in
+            print("🎯 Starting temporary unblock")
+            guard let self = self else { return }
+            
+            let model = BlockingApplicationModel.shared
+            model.appBlocker.unblockApplicationsTemporarily()
+            print("🎯 Unblock command sent")
         })
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))

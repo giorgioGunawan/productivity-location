@@ -12,7 +12,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         super.intervalDidStart(for: activity)
         
         let tokens = loadSelectedAppTokens()
-        print("🔒 Monitor Extension: Starting block with tokens: \(tokens)")
+        print("🔒 Monitor Extension: Starting block")
         
         if !tokens.isEmpty {
             store.shield.applications = tokens
@@ -46,7 +46,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
                 
         do {
             let tokens = try JSONDecoder().decode(Set<ApplicationToken>.self, from: encodedData)
-            print("✅ Successfully decoded tokens: \(tokens)")
+            print("✅ Successfully decoded tokens")
             return tokens
         } catch {
             print("❌ Failed to decode tokens: \(error)")
