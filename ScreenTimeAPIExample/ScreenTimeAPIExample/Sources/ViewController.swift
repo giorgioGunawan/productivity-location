@@ -381,7 +381,7 @@ final class ViewController: UIViewController {
             print("🎯 Starting temporary unblock")
             guard let self = self else { return }
             
-            appBlocker.unblockApplicationsTemporarily()
+            appBlocker.unblockApplicationsTemporarily15seconds()
             print("🎯 Unblock command sent")
         })
         

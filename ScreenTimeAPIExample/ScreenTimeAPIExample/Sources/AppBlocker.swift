@@ -137,34 +137,6 @@ class AppBlocker: ObservableObject {
             print("❌ Failed to start monitoring: \(error)")
         }
     }
-    
-    // Add this function to enforce all active schedules
-    func enforceActiveSchedules() {
-        let now = Date()
-        var shouldBlock = false
-        
-        // Check if current time falls within any active schedule
-        for schedule in model.schedules where schedule.isActive {
-            if isCurrentTimeInBlockWindow(
-                currentDate: now,
-                blockStartHour: schedule.startHour,
-                blockStartMinute: schedule.startMinute,
-                blockEndHour: schedule.endHour,
-                blockEndMinute: schedule.endMinute
-            ) {
-                shouldBlock = true
-                break
-            }
-        }
-        
-        if shouldBlock {
-            store.shield.applications = model.selectedAppsTokens
-            startedBlocking = true
-        } else {
-            store.shield.applications = []
-            startedBlocking = false
-        }
-    }
 
     // Blocking logic with time window
     public func block(completion: @escaping (Result<Void, Error>) -> Void) {
@@ -294,45 +266,27 @@ class AppBlocker: ObservableObject {
                         self.pedometer?.stopUpdates()
                         // Show the final step count for a moment before unblocking
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                            self.unblockApplicationsTemporarily()
+                            self.unblockApplicationsTemporarily5minutes()
                         }
                     }
                 }
             })
         }
     }
-    
-    func startStepCounting() {
-        if CMPedometer.isStepCountingAvailable() {
-            let pedometer = CMPedometer()
-            pedometer.startUpdates(from: Date()) { pedometerData, error in
-                DispatchQueue.main.async { // Ensure updates are handled on the main thread
-                    guard let data = pedometerData, error == nil else {
-                        print("Error starting step counting: \(error?.localizedDescription ?? "Unknown error")")
-                        return
-                    }
-                    let steps = data.numberOfSteps.intValue
-                    print("Number of steps: \(steps)")
-                    print("Start")
-                    // Check if the user has walked 10 steps
-                    if steps >= 15 {
-                        // Unblock the applications
-                        self.unblockApplicationsTemporarily()
-                        // Stop step counting
-                        pedometer.stopUpdates()
-                        
-                        return
-                    }
-                    // Publish the step count on the main thread
-                    self.stepCount = steps
-                }
-            }
-        } else {
-            print("Step counting not available on this device.")
+
+    func unblockApplicationsTemporarily5minutes() {
+        print("🔓 Temporarily unblocking apps")
+        store.shield.applications = []
+        // Schedule reblock after 15 seconds
+        scheduleBlockTimer(after: 15)
+        // Reset step count after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            self.stepCount = 0
         }
     }
     
-    func unblockApplicationsTemporarily() {
+    // for debugging
+    func unblockApplicationsTemporarily15seconds() {
         print("🔓 Temporarily unblocking apps")
         store.shield.applications = []
         // Schedule reblock after 15 seconds
@@ -350,26 +304,6 @@ class AppBlocker: ObservableObject {
         case invalidTimeZone
     }
     
-    /*
-    func isCurrentTimeInBlockWindow(currentDate: Date, blockStartHour: Int, blockStartMinute: Int, blockEndHour: Int, blockEndMinute: Int) -> Bool {
-        let calendar = Calendar.current
-        let components = calendar.dateComponents([.hour, .minute], from: currentDate)
-        guard let currentHour = components.hour, let currentMinute = components.minute else {
-            return false
-        }
-        
-        let currentTime = currentHour * 60 + currentMinute
-        let startTime = blockStartHour * 60 + blockStartMinute
-        let endTime = blockEndHour * 60 + blockEndMinute
-        
-        // Handle overnight schedules (e.g., 23:00 to 06:00)
-        if endTime < startTime {
-            return currentTime >= startTime || currentTime <= endTime
-        } else {
-            return currentTime >= startTime && currentTime <= endTime
-        }
-    }*/
-    
     func isCurrentTimeEqualToDateUpToMinute(_ date1: Date, _ date2: Date) -> Bool {
         let calendar = Calendar.current
         let components1 = calendar.dateComponents([.hour, .minute], from: date1)
@@ -384,73 +318,6 @@ class AppBlocker: ObservableObject {
         DispatchQueue.main.async {
             self.stepCount = 0
         }
-    }
-
-    // New function to start schedule
-    func startBlockingSchedule(scheduleStartHour: Int, scheduleStartMinute: Int, 
-                             scheduleEndHour: Int, scheduleEndMinute: Int) {
-        print("🔄 Starting blocking schedule...")
-        
-        // Get selected app tokens
-        let selectedAppTokens = model.selectedAppsTokens
-        
-        // Set up DeviceActivityCenter
-        let deviceActivityCenter = DeviceActivityCenter()
-        
-        // Create the schedule components
-        var startComponents = DateComponents()
-        startComponents.hour = scheduleStartHour
-        startComponents.minute = scheduleStartMinute
-        
-        var endComponents = DateComponents()
-        endComponents.hour = scheduleEndHour
-        endComponents.minute = scheduleEndMinute
-        
-        print("⏰ Schedule set for: \(scheduleStartHour):\(scheduleStartMinute) to \(scheduleEndHour):\(scheduleEndMinute)")
-        
-        // Check if we're currently within the schedule
-        let calendar = Calendar.current
-        let now = Date()
-        let currentComponents = calendar.dateComponents([.hour, .minute], from: now)
-        let currentTime = currentComponents.hour! * 60 + currentComponents.minute!
-        let startTime = scheduleStartHour * 60 + scheduleStartMinute
-        let endTime = scheduleEndHour * 60 + scheduleEndMinute
-        print("🕐 Current time: \(currentComponents.hour!):\(currentComponents.minute!)")
-
-        let schedule = DeviceActivitySchedule(
-            intervalStart: startComponents,
-            intervalEnd: endComponents,
-            repeats: true
-        )
-        
-        do {
-            try deviceActivityCenter.startMonitoring(.daily, during: schedule)
-            print("✅ Monitoring started successfully")
-            
-            // If we're currently within the schedule, block immediately
-            if isCurrentTimeInBlockWindow(currentDate: now,
-                                        blockStartHour: scheduleStartHour,
-                                        blockStartMinute: scheduleStartMinute,
-                                        blockEndHour: scheduleEndHour,
-                                        blockEndMinute: scheduleEndMinute) {
-                print("📱 Currently within block window - blocking apps immediately")
-                store.shield.applications = selectedAppTokens
-            } else {
-                print("⏳ Outside block window - waiting for scheduled time")
-            }
-            
-            self.startedBlocking = true
-            print("Schedule started: \(scheduleStartHour):\(scheduleStartMinute) to \(scheduleEndHour):\(scheduleEndMinute)")
-        } catch {
-            print("Failed to start monitoring: \(error)")
-        }
-    }
-
-    // Add cleanup for schedule
-    func stopSchedule() {
-        let deviceActivityCenter = DeviceActivityCenter()
-        deviceActivityCenter.stopMonitoring([.daily])
-        unblockAllApps()
     }
     
     func checkAndUnblockForDeletedSchedule(_ deletedSchedule: BlockSchedule) {
