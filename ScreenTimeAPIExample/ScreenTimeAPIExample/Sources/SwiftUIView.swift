@@ -20,7 +20,7 @@ struct SwiftUIView: View {
     @State private var scheduleStartMinute: Int
     @State private var scheduleEndHour: Int
     @State private var scheduleEndMinute: Int
-    @StateObject var appBlocker = AppBlocker()
+    @StateObject var appBlocker = AppBlocker.shared
     
     @State private var showingAddSchedule = false
     @State private var currentSteps: Int = 0

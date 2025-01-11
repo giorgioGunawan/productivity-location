@@ -9,6 +9,7 @@ extension DeviceActivityName {
 }
 
 class AppBlocker: ObservableObject {
+    static let shared = AppBlocker()
     
     let store: ManagedSettingsStore
     let model: BlockingApplicationModel

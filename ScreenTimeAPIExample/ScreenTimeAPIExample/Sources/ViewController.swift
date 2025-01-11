@@ -325,6 +325,7 @@ final class ViewController: UIViewController {
     var _center = AuthorizationCenter.shared
     private let onboardingModel = OnboardingModel()
     private var cancellables = Set<AnyCancellable>()
+    let appBlocker = AppBlocker.shared
     
     private lazy var _contentView: UIHostingController<AnyView> = {
         let model = BlockingApplicationModel.shared
@@ -372,8 +373,7 @@ final class ViewController: UIViewController {
         
         alert.addAction(UIAlertAction(title: "Unblock All Apps", style: .default) { [weak self] _ in
             guard let self = self else { return }
-            let model = BlockingApplicationModel.shared
-            model.appBlocker.unblockAllApps()
+            appBlocker.unblockAllApps()
             print("🔧 Unblocked all apps")
         })
 
@@ -381,8 +381,7 @@ final class ViewController: UIViewController {
             print("🎯 Starting temporary unblock")
             guard let self = self else { return }
             
-            let model = BlockingApplicationModel.shared
-            model.appBlocker.unblockApplicationsTemporarily()
+            appBlocker.unblockApplicationsTemporarily()
             print("🎯 Unblock command sent")
         })
         
