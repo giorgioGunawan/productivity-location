@@ -268,7 +268,7 @@ class AppBlocker: ObservableObject {
     func unblockAllApps() {
         store.shield.applications = []
         self.startedBlocking = false
-        stopMonitoring()
+        // stopMonitoring()
     }
 
     func configureMonitorExtension() {
@@ -341,11 +341,6 @@ class AppBlocker: ObservableObject {
             repeats: true
         )
         
-        do {
-            try deviceActivityCenter.startMonitoring(.daily, during: schedule)
-        } catch {
-            print("❌ Failed to maintain schedule monitoring: \(error)")
-        }
         // Schedule reblock after 15 seconds
         scheduleBlockTimer(after: 15)
         // Reset step count after a short delay
@@ -365,12 +360,7 @@ class AppBlocker: ObservableObject {
             intervalEnd: DateComponents(hour: blockEndHour, minute: blockEndMinute),
             repeats: true
         )
-        
-        do {
-            try deviceActivityCenter.startMonitoring(.daily, during: schedule)
-        } catch {
-            print("❌ Failed to maintain schedule monitoring: \(error)")
-        }
+
         // Schedule reblock after 15 seconds
         scheduleBlockTimer(after: 15)
         // Reset step count after a short delay
