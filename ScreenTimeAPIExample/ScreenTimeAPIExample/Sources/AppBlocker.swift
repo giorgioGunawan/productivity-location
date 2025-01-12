@@ -211,11 +211,11 @@ class AppBlocker: ObservableObject {
         // Schedule the notification
         let content = UNMutableNotificationContent()
         content.title = "App Block Warning"
-        content.body = "The app will be blocked in 1 minute"
+        content.body = "The app will be blocked in 5 seconds"
         content.sound = .default
         
         // Trigger notification 1 minute before blocking
-        let triggerTime = timeInterval - 60 // 60 seconds before block
+        let triggerTime = timeInterval - 5 // 5 seconds before block
         if triggerTime > 0 {
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: triggerTime, repeats: false)
             let request = UNNotificationRequest(identifier: "blockWarning", content: content, trigger: trigger)
