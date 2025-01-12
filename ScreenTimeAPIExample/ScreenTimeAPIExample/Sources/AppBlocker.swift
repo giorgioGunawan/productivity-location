@@ -211,11 +211,19 @@ class AppBlocker: ObservableObject {
         // Schedule the notification
         let content = UNMutableNotificationContent()
         content.title = "App Block Warning"
-        content.body = "The app will be blocked in 5 seconds"
+        if(timeInterval > 100) {
+            content.body = "The app will be blocked in 1 minute"
+        } else {
+            content.body = "The app will be blocked in 5 seconds"
+        }
         content.sound = .default
         
         // Trigger notification 1 minute before blocking
-        let triggerTime = timeInterval - 5 // 5 seconds before block
+        let triggerTime = if timeInterval > 100 {
+            timeInterval - 60 // 1 minute before block
+        } else {
+            timeInterval - 5  // 5 seconds before block
+        }
         if triggerTime > 0 {
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: triggerTime, repeats: false)
             let request = UNNotificationRequest(identifier: "blockWarning", content: content, trigger: trigger)
@@ -226,10 +234,33 @@ class AppBlocker: ObservableObject {
                 }
             }
         }
-        
-        // Schedule the block timer
+
+                // Schedule the immediate reblock timer
         Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: false) { [weak self] _ in
             self?.block(completion: { _ in})
+        }
+        
+        // Start a timer to check schedule status periodically
+        Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
+            
+            let currentDate = Date()
+            let isInSchedule = self.isCurrentTimeInBlockWindow(
+                currentDate: currentDate,
+                blockStartHour: self.blockStartHour,
+                blockStartMinute: self.blockStartMinute,
+                blockEndHour: self.blockEndHour,
+                blockEndMinute: self.blockEndMinute
+            )
+            
+            if !isInSchedule {
+                print("Schedule period has ended, unblocking apps")
+                self.unblockAllApps()
+                timer.invalidate()
+            }
         }
     }
 
@@ -301,6 +332,20 @@ class AppBlocker: ObservableObject {
     func unblockApplicationsTemporarily5minutes() {
         print("🔓 Temporarily unblocking apps")
         store.shield.applications = []
+
+        // Keep the original monitoring schedule active
+        let deviceActivityCenter = DeviceActivityCenter()
+        let schedule = DeviceActivitySchedule(
+            intervalStart: DateComponents(hour: blockStartHour, minute: blockStartMinute),
+            intervalEnd: DateComponents(hour: blockEndHour, minute: blockEndMinute),
+            repeats: true
+        )
+        
+        do {
+            try deviceActivityCenter.startMonitoring(.daily, during: schedule)
+        } catch {
+            print("❌ Failed to maintain schedule monitoring: \(error)")
+        }
         // Schedule reblock after 15 seconds
         scheduleBlockTimer(after: 15)
         // Reset step count after a short delay
@@ -313,6 +358,19 @@ class AppBlocker: ObservableObject {
     func unblockApplicationsTemporarily15seconds() {
         print("🔓 Temporarily unblocking apps")
         store.shield.applications = []
+        // Keep the original monitoring schedule active
+        let deviceActivityCenter = DeviceActivityCenter()
+        let schedule = DeviceActivitySchedule(
+            intervalStart: DateComponents(hour: blockStartHour, minute: blockStartMinute),
+            intervalEnd: DateComponents(hour: blockEndHour, minute: blockEndMinute),
+            repeats: true
+        )
+        
+        do {
+            try deviceActivityCenter.startMonitoring(.daily, during: schedule)
+        } catch {
+            print("❌ Failed to maintain schedule monitoring: \(error)")
+        }
         // Schedule reblock after 15 seconds
         scheduleBlockTimer(after: 15)
         // Reset step count after a short delay
