@@ -415,12 +415,33 @@ final class ViewController: UIViewController {
     
     @objc private func handleOnboardingCompleted() {
         print("🟣 Handling onboarding completion")
-        DispatchQueue.main.async { [weak self] in
+        
+        // First request Screen Time authorization
+        Task { [weak self] in
             guard let self = self else { return }
-            let model = BlockingApplicationModel.shared
-            let newView = SwiftUIView().environmentObject(model)
-            self._contentView.rootView = AnyView(newView)
-            print("🟣 Updated root view to SwiftUIView")
+            do {
+                try await self._center.requestAuthorization(for: .individual)
+                print("✅ Screen Time authorization successfully requested")
+                
+                // Then request notification permissions
+                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+                    if granted {
+                        print("✅ Notification permission granted")
+                    } else if let error = error {
+                        print("❌ Error requesting notification permissions: \(error)")
+                    }
+                    
+                    // Update UI after both permissions are handled
+                    DispatchQueue.main.async {
+                        let model = BlockingApplicationModel.shared
+                        let newView = SwiftUIView().environmentObject(model)
+                        self._contentView.rootView = AnyView(newView)
+                        print("🟣 Updated root view to SwiftUIView")
+                    }
+                }
+            } catch {
+                print("❌ Screen Time authorization request failed: \(error)")
+            }
         }
     }
     
@@ -465,6 +486,14 @@ extension ViewController {
                 print(error.localizedDescription)
                 print("❌ Authorization request failed: \(error)")
                 print("Error details: \(error.localizedDescription)")
+            }
+        }
+
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] granted, error in
+            if granted {
+                print("✅ Notification permission granted")
+            } else if let error = error {
+                print("❌ Error requesting notification permissions: \(error)")
             }
         }
     }

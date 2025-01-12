@@ -3,6 +3,7 @@ import ManagedSettings
 import DeviceActivity
 import CoreMotion
 import Combine
+import UserNotifications
 
 extension DeviceActivityName {
     static let daily = Self("daily")
@@ -51,6 +52,7 @@ class AppBlocker: ObservableObject {
     
     // Function to start the blocking timer
     func startBlockingTimer(blockStartHour: Int, blockEndHour: Int, blockStartMinute: Int, blockEndMinute: Int) {
+        print("Start blocking timer")
         // Calculate the time interval until the next block schedule
         let currentDate = Date()
         
@@ -91,6 +93,7 @@ class AppBlocker: ObservableObject {
             // Dates are equal up to the minute
             scheduleUnblockTimer(after: timeIntervalUntilUnblock + 60) // Adding one minute to the time interval
         } else {
+            print("unblocking", timeIntervalUntilUnblock)
             // Dates are not equal up to the minute
             scheduleUnblockTimer(after: timeIntervalUntilUnblock)
         }
@@ -204,6 +207,27 @@ class AppBlocker: ObservableObject {
     
     private func scheduleBlockTimer(after timeInterval: TimeInterval) {
         print("Scheduling a timer block")
+        
+        // Schedule the notification
+        let content = UNMutableNotificationContent()
+        content.title = "App Block Warning"
+        content.body = "The app will be blocked in 1 minute"
+        content.sound = .default
+        
+        // Trigger notification 1 minute before blocking
+        let triggerTime = timeInterval - 60 // 60 seconds before block
+        if triggerTime > 0 {
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: triggerTime, repeats: false)
+            let request = UNNotificationRequest(identifier: "blockWarning", content: content, trigger: trigger)
+            
+            UNUserNotificationCenter.current().add(request) { error in
+                if let error = error {
+                    print("Error scheduling notification: \(error)")
+                }
+            }
+        }
+        
+        // Schedule the block timer
         Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: false) { [weak self] _ in
             self?.block(completion: { _ in})
         }
