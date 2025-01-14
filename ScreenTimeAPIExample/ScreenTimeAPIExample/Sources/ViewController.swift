@@ -384,6 +384,14 @@ final class ViewController: UIViewController {
             appBlocker.unblockApplicationsTemporarily15seconds()
             print("🎯 Unblock command sent")
         })
+
+        alert.addAction(UIAlertAction(title: "Unblock 5 mins", style: .default) { [weak self] _ in
+            print("🎯 Starting temporary unblock")
+            guard let self = self else { return }
+            
+            appBlocker.unblockApplicationsTemporarily5minutes()
+            print("🎯 Unblock command sent")
+        })
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         

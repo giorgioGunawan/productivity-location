@@ -6,6 +6,7 @@ import Combine
 import UserNotifications
 
 extension DeviceActivityName {
+    static let once = Self("once")
     static let daily = Self("daily")
 }
 
@@ -49,55 +50,6 @@ class AppBlocker: ObservableObject {
     
     // Initialize timer for blocking
     var timer: Timer?
-    
-    // Function to start the blocking timer
-    func startBlockingTimer(blockStartHour: Int, blockEndHour: Int, blockStartMinute: Int, blockEndMinute: Int) {
-        print("Start blocking timer")
-        // Calculate the time interval until the next block schedule
-        let currentDate = Date()
-        
-        let calendar = Calendar.current
-        
-        guard let nextBlockDate = calendar.nextDate(after: currentDate,
-                                                     matching: DateComponents(hour: blockStartHour, minute: blockStartMinute),
-                                                     matchingPolicy: .strict),
-              let nextBlockEndDate = calendar.nextDate(after: currentDate,
-                                                        matching: DateComponents(hour: blockEndHour, minute: blockEndMinute),
-                                                        matchingPolicy: .strict)
-        else {
-            return
-        }
-        
-        let timeIntervalUntilBlock = nextBlockDate.timeIntervalSince(currentDate)
-        let timeIntervalUntilUnblock = nextBlockEndDate.timeIntervalSince(currentDate)
-        
-        self.blockStartHour = blockStartHour;
-        self.blockEndHour = blockEndHour;
-        self.blockStartMinute = blockStartMinute;
-        self.blockEndMinute = blockEndMinute;
-
-        configureMonitorExtension()
-        
-        let isInTimeRange = isCurrentTimeInBlockWindow(currentDate: currentDate, blockStartHour: blockStartHour, blockStartMinute: blockStartMinute, blockEndHour: blockEndHour, blockEndMinute: blockEndMinute)
-
-        if (isInTimeRange) {
-            self.block(completion: { _ in})
-        } else {
-            scheduleBlockTimer(after: timeIntervalUntilBlock);
-        }
-
-        self.startedBlocking = true
-    
-        // If current time is exactly the same as the schedule unblock end, schedule unblock for one minute extra
-        if isCurrentTimeEqualToDateUpToMinute(currentDate, nextBlockEndDate) {
-            // Dates are equal up to the minute
-            scheduleUnblockTimer(after: timeIntervalUntilUnblock + 60) // Adding one minute to the time interval
-        } else {
-            print("unblocking", timeIntervalUntilUnblock)
-            // Dates are not equal up to the minute
-            scheduleUnblockTimer(after: timeIntervalUntilUnblock)
-        }
-    }
     
     func startBlockingSchedule(schedule: BlockSchedule) {
         print("🔄 Starting blocking for schedule: \(schedule.formattedStartTime()) - \(schedule.formattedEndTime())")
@@ -205,7 +157,7 @@ class AppBlocker: ObservableObject {
         }
     }
     
-    private func scheduleBlockTimer(after timeInterval: TimeInterval) {
+    private func scheduleBlockNotification(after timeInterval: TimeInterval) {
         print("Scheduling a timer block")
         
         // Schedule the notification
@@ -234,34 +186,6 @@ class AppBlocker: ObservableObject {
                 }
             }
         }
-
-                // Schedule the immediate reblock timer
-        Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: false) { [weak self] _ in
-            self?.block(completion: { _ in})
-        }
-        
-        // Start a timer to check schedule status periodically
-        Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] timer in
-            guard let self = self else {
-                timer.invalidate()
-                return
-            }
-            
-            let currentDate = Date()
-            let isInSchedule = self.isCurrentTimeInBlockWindow(
-                currentDate: currentDate,
-                blockStartHour: self.blockStartHour,
-                blockStartMinute: self.blockStartMinute,
-                blockEndHour: self.blockEndHour,
-                blockEndMinute: self.blockEndMinute
-            )
-            
-            if !isInSchedule {
-                print("Schedule period has ended, unblocking apps")
-                self.unblockAllApps()
-                timer.invalidate()
-            }
-        }
     }
 
     // Function to unblock all apps
@@ -287,6 +211,40 @@ class AppBlocker: ObservableObject {
             print("❌ Failed to configure monitor extension: \(error)")
         }
     }
+
+    func unblockWithDeviceActivity(forDuration seconds: TimeInterval, blockEndHour: Int, blockEndMinute: Int) {
+        let deviceActivityCenter = DeviceActivityCenter()
+
+        self.scheduleBlockNotification(after: seconds);
+        
+        // Calculate the start time after the delay
+        let now = Date()
+        let startDate = now.addingTimeInterval(seconds)
+        
+        // Extract the start time components
+        let calendar = Calendar.current
+        let startComponents = calendar.dateComponents([.hour, .minute, .second], from: startDate)
+        
+        // Create the end time components
+        var endComponents = DateComponents()
+        endComponents.hour = blockEndHour
+        endComponents.minute = blockEndMinute
+        
+        // Create the activity schedule
+        let schedule = DeviceActivitySchedule(
+            intervalStart: startComponents,
+            intervalEnd: endComponents,
+            repeats: false // No repetition needed
+        )
+        
+        do {
+            try deviceActivityCenter.startMonitoring(.once, during: schedule)
+            print("🔄 Monitor extension will start after \(seconds) seconds and run until \(blockEndHour):\(blockEndMinute).")
+        } catch {
+            print("❌ Failed to configure monitor extension: \(error)")
+        }
+    }
+
     
     func unblockTemp() {
         hasReachedGoal = false
@@ -341,8 +299,8 @@ class AppBlocker: ObservableObject {
             repeats: true
         )
         
-        // Schedule reblock after 15 seconds
-        scheduleBlockTimer(after: 15)
+        // Schedule reblock after 300 seconds
+        unblockWithDeviceActivity(forDuration: 300, blockEndHour: blockEndHour, blockEndMinute: blockEndMinute)
         // Reset step count after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.stepCount = 0
@@ -362,7 +320,7 @@ class AppBlocker: ObservableObject {
         )
 
         // Schedule reblock after 15 seconds
-        scheduleBlockTimer(after: 15)
+        unblockWithDeviceActivity(forDuration: 15, blockEndHour: blockEndHour, blockEndMinute: blockEndMinute)
         // Reset step count after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.stepCount = 0
