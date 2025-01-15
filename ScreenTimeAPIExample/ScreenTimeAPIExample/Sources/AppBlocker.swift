@@ -26,11 +26,6 @@ class AppBlocker: ObservableObject {
             print("Updating stepCount to: \(newValue)")
         }
     }
-    @Published var startedBlocking: Bool = false {
-        willSet {
-            print("Started blocking: \(newValue)")
-        }
-    }
     private var pedometer: CMPedometer?
     private var hasReachedGoal: Bool = false
     
@@ -81,43 +76,16 @@ class AppBlocker: ObservableObject {
                                         blockEndHour: schedule.endHour,
                                         blockEndMinute: schedule.endMinute) {
                 print("📱 Currently within schedule window - blocking apps")
+                // This is not technically needed, since startMonitoring will block
+                // but this makes it instant, while startMonitoring can have a bit of delay
                 store.shield.applications = model.selectedAppsTokens
             } else {
                 print("⏳ Outside schedule window - waiting for start time")
             }
             
-            self.startedBlocking = true
             print("✅ Monitoring started successfully")
         } catch {
             print("❌ Failed to start monitoring: \(error)")
-        }
-    }
-
-    // Blocking logic with time window
-    public func block(completion: @escaping (Result<Void, Error>) -> Void) {
-        print("🔒 Blocking apps...")
-        // Get selected app tokens
-        let selectedAppTokens = model.selectedAppsTokens
-        
-        // Block activity for all selected app tokens using DeviceActivityCenter
-        let deviceActivityCenter = DeviceActivityCenter()
-        
-        // Set up monitoring DeviceActivitySchedule
-        let blockSchedule = DeviceActivitySchedule(
-            intervalStart: DateComponents(hour: self.blockStartHour, minute: self.blockStartMinute),
-            intervalEnd: DateComponents(hour: self.blockEndHour, minute: self.blockEndMinute),
-            repeats: false
-        )
-        
-        store.shield.applications = selectedAppTokens
-
-        configureMonitorExtension()
-
-        do {
-            try deviceActivityCenter.startMonitoring(DeviceActivityName.daily, during: blockSchedule)
-            completion(.success(()))
-        } catch {
-            completion(.failure(error))
         }
     }
     
@@ -191,7 +159,6 @@ class AppBlocker: ObservableObject {
     // Function to unblock all apps
     func unblockAllApps() {
         store.shield.applications = []
-        self.startedBlocking = false
         // stopMonitoring()
     }
 
@@ -289,7 +256,7 @@ class AppBlocker: ObservableObject {
 
     func unblockApplicationsTemporarily5minutes() {
         print("🔓 Temporarily unblocking apps")
-        store.shield.applications = []
+        self.unblockAllApps()
 
         // Keep the original monitoring schedule active
         let deviceActivityCenter = DeviceActivityCenter()
@@ -310,7 +277,8 @@ class AppBlocker: ObservableObject {
     // for debugging
     func unblockApplicationsTemporarily15seconds() {
         print("🔓 Temporarily unblocking apps")
-        store.shield.applications = []
+        self.unblockAllApps()
+
         // Keep the original monitoring schedule active
         let deviceActivityCenter = DeviceActivityCenter()
         let schedule = DeviceActivitySchedule(
@@ -382,8 +350,7 @@ class AppBlocker: ObservableObject {
             
             if !shouldKeepBlocked {
                 print("🔓 No other active schedules, unblocking apps")
-                store.shield.applications = []
-                startedBlocking = false
+                self.unblockAllApps()
             } else {
                 print("🔒 Other active schedules found, keeping apps blocked")
             }

@@ -172,8 +172,6 @@ struct SwiftUIView: View {
                                 .stroke(Color.white, lineWidth: 2)
                         )
                 }
-                .disabled(appBlocker.startedBlocking == false)
-                .opacity(appBlocker.startedBlocking ? 1 : 0.3)
             }
             .padding(.horizontal, 40)
             .padding(.bottom, 30)
