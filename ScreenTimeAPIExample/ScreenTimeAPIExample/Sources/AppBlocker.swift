@@ -20,7 +20,7 @@ class AppBlocker: ObservableObject {
     var blockEndHour: Int
     var blockEndMinute: Int
 
-    private var activeSchedules: Set<BlockSchedule> = []
+    var activeSchedules: Set<BlockSchedule> = []
     private var isTemporarilyUnblocked: Bool = false
     
     @Published var stepCount: Int = 0 {
@@ -36,6 +36,10 @@ class AppBlocker: ObservableObject {
     @Published var isWithinSchedule: Bool = false
     private var scheduleTimer: Timer?
     
+    // Property to control the alert presentation
+    @Published var showActiveSchedulesAlert: Bool = false
+    var activeSchedulesText: String = ""
+
     init() {
         self.store = ManagedSettingsStore()
         self.model = BlockingApplicationModel.shared
@@ -428,5 +432,16 @@ class AppBlocker: ObservableObject {
                 print("🔒 Other active schedules found, keeping apps blocked")
             }
         }
+    }
+
+    // Method to prepare and show active schedules
+    func showActiveSchedules() {
+        var schedulesDescription = "Active Schedules:\n"
+        for schedule in activeSchedules {
+            schedulesDescription += "Schedule ID: \(schedule.id), Start: \(schedule.formattedStartTime()), End: \(schedule.formattedEndTime())\n"
+        }
+        print(schedulesDescription)
+        activeSchedulesText = schedulesDescription
+        showActiveSchedulesAlert = true
     }
 }

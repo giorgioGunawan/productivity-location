@@ -393,6 +393,11 @@ final class ViewController: UIViewController {
             print("🎯 Unblock command sent")
         })
         
+        alert.addAction(UIAlertAction(title: "Show Active Schedules", style: .default) { [weak self] _ in
+            guard let self = self else { return }
+            self.showActiveSchedules()
+        })
+        
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         
         present(alert, animated: true)
@@ -455,6 +460,19 @@ final class ViewController: UIViewController {
     
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+    
+    // Method to show active schedules
+    private func showActiveSchedules() {
+        var schedulesDescription = "Active Schedules:\n"
+        print(appBlocker.activeSchedules)
+        for schedule in appBlocker.activeSchedules {
+            schedulesDescription += "Schedule ID: \(String(schedule.id.uuidString.prefix(5))), Start: \(schedule.formattedStartTime()), End: \(schedule.formattedEndTime())\n"
+        }
+
+        let alert = UIAlertController(title: "Active Schedules", message: schedulesDescription, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        present(alert, animated: true, completion: nil)
     }
 }
 
