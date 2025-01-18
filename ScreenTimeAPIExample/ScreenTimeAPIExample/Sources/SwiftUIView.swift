@@ -93,7 +93,7 @@ struct SwiftUIView: View {
                     
                     // Check each deleted schedule
                     for deletedSchedule in schedulesToDelete {
-                        appBlocker.checkAndUnblockForDeletedSchedule(deletedSchedule)
+                        appBlocker.removeAndCheckSchedule(deletedSchedule)
                     }
                 }
             }

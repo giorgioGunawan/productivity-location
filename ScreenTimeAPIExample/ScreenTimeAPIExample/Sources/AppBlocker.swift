@@ -19,6 +19,9 @@ class AppBlocker: ObservableObject {
     var blockStartMinute: Int
     var blockEndHour: Int
     var blockEndMinute: Int
+
+    private var activeSchedules: Set<BlockSchedule> = []
+    private var isTemporarilyUnblocked: Bool = false
     
     @Published var stepCount: Int = 0 {
         willSet {
@@ -49,6 +52,9 @@ class AppBlocker: ObservableObject {
     func startBlockingSchedule(schedule: BlockSchedule) {
         print("🔄 Starting blocking for schedule: \(schedule.formattedStartTime()) - \(schedule.formattedEndTime())")
         
+        // Add to active schedules
+        activeSchedules.insert(schedule)
+
         let deviceActivityCenter = DeviceActivityCenter()
         
         // Create the schedule components
@@ -67,7 +73,8 @@ class AppBlocker: ObservableObject {
         )
         
         do {
-            try deviceActivityCenter.startMonitoring(.daily, during: deviceSchedule)
+            let activityName = DeviceActivityName("schedule_\(schedule.id.uuidString)")
+            try deviceActivityCenter.startMonitoring(activityName, during: deviceSchedule)
             
             // If we're currently within the schedule, block immediately
             if isCurrentTimeInBlockWindow(currentDate: Date(),
@@ -86,6 +93,31 @@ class AppBlocker: ObservableObject {
             print("✅ Monitoring started successfully")
         } catch {
             print("❌ Failed to start monitoring: \(error)")
+        }
+    }
+
+    func removeSchedule(schedule: BlockSchedule) {
+        activeSchedules.remove(schedule)
+        let deviceActivityCenter = DeviceActivityCenter()
+        let activityName = DeviceActivityName("schedule_\(schedule.id.uuidString)")
+        deviceActivityCenter.stopMonitoring([activityName])
+        
+        // Check if we should unblock apps
+        if !isCurrentlyInAnyBlockWindow() && !isTemporarilyUnblocked {
+            unblockAllApps()
+        }
+    }
+
+    func isCurrentlyInAnyBlockWindow() -> Bool {
+        let currentDate = Date()
+        return activeSchedules.contains { schedule in
+            isCurrentTimeInBlockWindow(
+                currentDate: currentDate,
+                blockStartHour: schedule.startHour,
+                blockStartMinute: schedule.startMinute,
+                blockEndHour: schedule.endHour,
+                blockEndMinute: schedule.endMinute
+            )
         }
     }
     
@@ -159,28 +191,13 @@ class AppBlocker: ObservableObject {
     // Function to unblock all apps
     func unblockAllApps() {
         store.shield.applications = []
-        // stopMonitoring()
-    }
-
-    func configureMonitorExtension() {
-        let deviceActivityCenter = DeviceActivityCenter()
-        
-        let schedule = DeviceActivitySchedule(
-            intervalStart: DateComponents(hour: blockStartHour, minute: blockStartMinute),
-            intervalEnd: DateComponents(hour: blockEndHour, minute: blockEndMinute),
-            repeats: true
-        )
-        
-        do {
-            try deviceActivityCenter.startMonitoring(.daily, during: schedule)
-            print("🔄 Monitor extension configured for: \(blockStartHour):\(blockStartMinute) to \(blockEndHour):\(blockEndMinute)")
-        } catch {
-            print("❌ Failed to configure monitor extension: \(error)")
-        }
     }
 
     func unblockWithDeviceActivity(forDuration seconds: TimeInterval, blockEndHour: Int, blockEndMinute: Int) {
+        guard !activeSchedules.isEmpty else { return }
+
         let deviceActivityCenter = DeviceActivityCenter()
+        isTemporarilyUnblocked = true
 
         self.scheduleBlockNotification(after: seconds);
         
@@ -198,15 +215,30 @@ class AppBlocker: ObservableObject {
         endComponents.minute = blockEndMinute
         
         // Create the activity schedule
-        let schedule = DeviceActivitySchedule(
+        let tempSchedule = DeviceActivitySchedule(
             intervalStart: startComponents,
             intervalEnd: endComponents,
-            repeats: false // No repetition needed
+            repeats: false
         )
         
         do {
-            try deviceActivityCenter.startMonitoring(.once, during: schedule)
+            // Stop all active schedules temporarily
+            let activeActivityNames = activeSchedules.map { DeviceActivityName("schedule_\($0.id.uuidString)") }
+            deviceActivityCenter.stopMonitoring(activeActivityNames)
+
+            try deviceActivityCenter.startMonitoring(.once, during: tempSchedule)
             print("🔄 Monitor extension will start after \(seconds) seconds and run until \(blockEndHour):\(blockEndMinute).")
+
+            // Schedule reinstatement of all original schedules
+            DispatchQueue.main.asyncAfter(deadline: .now() + seconds + 1) { [weak self] in
+                guard let self = self else { return }
+                self.isTemporarilyUnblocked = false
+                
+                // Restart all active schedules
+                for schedule in self.activeSchedules {
+                    self.startBlockingSchedule(schedule: schedule)
+                }
+            }
         } catch {
             print("❌ Failed to configure monitor extension: \(error)")
         }
@@ -258,14 +290,6 @@ class AppBlocker: ObservableObject {
         print("🔓 Temporarily unblocking apps")
         self.unblockAllApps()
 
-        // Keep the original monitoring schedule active
-        let deviceActivityCenter = DeviceActivityCenter()
-        let schedule = DeviceActivitySchedule(
-            intervalStart: DateComponents(hour: blockStartHour, minute: blockStartMinute),
-            intervalEnd: DateComponents(hour: blockEndHour, minute: blockEndMinute),
-            repeats: true
-        )
-        
         // Schedule reblock after 300 seconds
         unblockWithDeviceActivity(forDuration: 300, blockEndHour: blockEndHour, blockEndMinute: blockEndMinute)
         // Reset step count after a short delay
@@ -278,14 +302,6 @@ class AppBlocker: ObservableObject {
     func unblockApplicationsTemporarily15seconds() {
         print("🔓 Temporarily unblocking apps")
         self.unblockAllApps()
-
-        // Keep the original monitoring schedule active
-        let deviceActivityCenter = DeviceActivityCenter()
-        let schedule = DeviceActivitySchedule(
-            intervalStart: DateComponents(hour: blockStartHour, minute: blockStartMinute),
-            intervalEnd: DateComponents(hour: blockEndHour, minute: blockEndMinute),
-            repeats: true
-        )
 
         // Schedule reblock after 15 seconds
         unblockWithDeviceActivity(forDuration: 15, blockEndHour: blockEndHour, blockEndMinute: blockEndMinute)
@@ -315,6 +331,63 @@ class AppBlocker: ObservableObject {
         hasReachedGoal = false
         DispatchQueue.main.async {
             self.stepCount = 0
+        }
+    }
+
+    // Replacement to checkAndUnblockForDeletedSchedule
+    func removeAndCheckSchedule(_ deletedSchedule: BlockSchedule) {
+        print("🔄 Removing schedule and checking block status...")
+        
+        // Remove from active schedules
+        activeSchedules.remove(deletedSchedule)
+
+        print("Here 1")
+        
+        // Stop monitoring for this specific schedule
+        let deviceActivityCenter = DeviceActivityCenter()
+        let activityName = DeviceActivityName("schedule_\(deletedSchedule.id.uuidString)")
+        deviceActivityCenter.stopMonitoring([activityName])
+
+        print("Here 2")
+        
+        // Check if the deleted schedule was currently active
+        let now = Date()
+        let wasActive = isCurrentTimeInBlockWindow(
+            currentDate: now,
+            blockStartHour: deletedSchedule.startHour,
+            blockStartMinute: deletedSchedule.startMinute,
+            blockEndHour: deletedSchedule.endHour,
+            blockEndMinute: deletedSchedule.endMinute
+        )
+
+        print("Here 3")
+        
+        if wasActive {
+            print("📱 Deleted schedule was active, checking other schedules...")
+            // Check if any other schedule is currently active
+            var shouldKeepBlocked = false
+            for schedule in model.schedules {
+                if schedule.id != deletedSchedule.id && // Skip the deleted schedule
+                   isCurrentTimeInBlockWindow(
+                    currentDate: now,
+                    blockStartHour: schedule.startHour,
+                    blockStartMinute: schedule.startMinute,
+                    blockEndHour: schedule.endHour,
+                    blockEndMinute: schedule.endMinute
+                ) {
+                    shouldKeepBlocked = true
+                    break
+                }
+            }
+
+            print("Here 4")
+            
+            if !shouldKeepBlocked {
+                print("🔓 No other active schedules, unblocking apps")
+                self.unblockAllApps()
+            } else {
+                print("🔒 Other active schedules found, keeping apps blocked")
+            }
         }
     }
     

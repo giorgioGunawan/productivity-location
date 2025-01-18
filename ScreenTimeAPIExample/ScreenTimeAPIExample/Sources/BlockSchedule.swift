@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct BlockSchedule: Codable, Identifiable {
+public struct BlockSchedule: Codable, Identifiable, Hashable {
     public let id: UUID
     public let startHour: Int
     public let startMinute: Int
@@ -30,5 +30,22 @@ public struct BlockSchedule: Codable, Identifiable {
     
     public func formattedEndTime() -> String {
         return String(format: "%02d:%02d", endHour, endMinute)
+    }
+
+    // Implementing Hashable
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(startHour)
+        hasher.combine(startMinute)
+        hasher.combine(endHour)
+        hasher.combine(endMinute)
+    }
+
+    public static func == (lhs: BlockSchedule, rhs: BlockSchedule) -> Bool {
+        return lhs.id == rhs.id &&
+               lhs.startHour == rhs.startHour &&
+               lhs.startMinute == rhs.startMinute &&
+               lhs.endHour == rhs.endHour &&
+               lhs.endMinute == rhs.endMinute
     }
 }
