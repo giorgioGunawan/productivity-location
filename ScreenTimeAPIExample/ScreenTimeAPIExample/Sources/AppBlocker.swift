@@ -20,25 +20,30 @@ class AppBlocker: ObservableObject {
     var blockEndHour: Int
     var blockEndMinute: Int
 
-    var activeSchedules: Set<BlockSchedule> = []
+    @Published var activeSchedules: Set<BlockSchedule> = [] {
+        didSet {
+            saveActiveSchedules()
+        }
+    }
+    
     private var isTemporarilyUnblocked: Bool = false
     
     @Published var stepCount: Int = 0 {
         willSet {
-            // Debug print to verify the value is being updated
             print("Updating stepCount to: \(newValue)")
         }
     }
+    
     private var pedometer: CMPedometer?
     private var hasReachedGoal: Bool = false
     
-    // Add schedule properties
     @Published var isWithinSchedule: Bool = false
     private var scheduleTimer: Timer?
     
-    // Property to control the alert presentation
     @Published var showActiveSchedulesAlert: Bool = false
     var activeSchedulesText: String = ""
+
+    private let activeSchedulesKey = "ActiveSchedules"
 
     init() {
         self.store = ManagedSettingsStore()
@@ -48,6 +53,28 @@ class AppBlocker: ObservableObject {
         self.blockEndHour = 0
         self.blockEndMinute = 0
         self.pedometer = CMPedometer()
+        loadActiveSchedules()
+    }
+    
+    // Save active schedules to UserDefaults
+    private func saveActiveSchedules() {
+        guard let groupUserDefaults = UserDefaults(suiteName: BlockingApplicationModel.appGroupID) else { return }
+        do {
+            let encodedData = try JSONEncoder().encode(Array(activeSchedules))
+            groupUserDefaults.set(encodedData, forKey: activeSchedulesKey)
+            groupUserDefaults.synchronize()
+        } catch {
+            print("❌ Failed to encode active schedules: \(error)")
+        }
+    }
+    
+    // Load active schedules from UserDefaults
+    private func loadActiveSchedules() {
+        guard let groupUserDefaults = UserDefaults(suiteName: BlockingApplicationModel.appGroupID) else { return }
+        if let data = groupUserDefaults.data(forKey: activeSchedulesKey),
+           let decoded = try? JSONDecoder().decode([BlockSchedule].self, from: data) {
+            activeSchedules = Set(decoded)
+        }
     }
     
     // Initialize timer for blocking
@@ -436,11 +463,10 @@ class AppBlocker: ObservableObject {
 
     // Method to prepare and show active schedules
     func showActiveSchedules() {
-        var schedulesDescription = "Active Schedules:\n"
+        var schedulesDescription = ""
         for schedule in activeSchedules {
             schedulesDescription += "Schedule ID: \(schedule.id), Start: \(schedule.formattedStartTime()), End: \(schedule.formattedEndTime())\n"
         }
-        print(schedulesDescription)
         activeSchedulesText = schedulesDescription
         showActiveSchedulesAlert = true
     }

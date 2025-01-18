@@ -464,12 +464,14 @@ final class ViewController: UIViewController {
     
     // Method to show active schedules
     private func showActiveSchedules() {
-        var schedulesDescription = "Active Schedules:\n"
-        print(appBlocker.activeSchedules)
+        var schedulesDescription = ""
         for schedule in appBlocker.activeSchedules {
-            schedulesDescription += "Schedule ID: \(String(schedule.id.uuidString.prefix(5))), Start: \(schedule.formattedStartTime()), End: \(schedule.formattedEndTime())\n"
+            schedulesDescription += "SID: \(String(schedule.id.uuidString.prefix(5))), \(schedule.formattedStartTime()) - \(schedule.formattedEndTime())\n"
         }
 
+        if(schedulesDescription == ""){
+            schedulesDescription = "No Schedule"
+        }
         let alert = UIAlertController(title: "Active Schedules", message: schedulesDescription, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
         present(alert, animated: true, completion: nil)
