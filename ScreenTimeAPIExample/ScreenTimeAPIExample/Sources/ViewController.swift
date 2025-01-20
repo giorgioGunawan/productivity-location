@@ -399,8 +399,25 @@ final class ViewController: UIViewController {
         })
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        alert.addAction(UIAlertAction(title: "Debug Active Schedules", style: .default) { [weak self] _ in
+            guard let self = self else { return }
+            self.debugActiveSchedules()
+        })
+
+        alert.addAction(UIAlertAction(title: "Refresh Set", style: .default) { [weak self] _ in
+            guard let self = self else { return }
+            appBlocker.refreshSet()
+        })
         
         present(alert, animated: true)
+    }
+    // Method to show active schedules
+    private func debugActiveSchedules() {
+        let debugInfo = appBlocker.getDebugInfo() // Get the debug information
+        let alert = UIAlertController(title: "Debug Active Schedules", message: debugInfo, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        present(alert, animated: true, completion: nil)
     }
     
     private func setupOnboardingObserver() {

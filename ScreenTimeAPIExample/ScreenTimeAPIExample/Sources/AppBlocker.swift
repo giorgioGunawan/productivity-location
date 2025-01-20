@@ -43,6 +43,10 @@ class AppBlocker: ObservableObject {
     @Published var showActiveSchedulesAlert: Bool = false
     var activeSchedulesText: String = ""
 
+    @Published var currentSchedule: BlockSchedule? // Track the current blocking schedule
+    @Published var unblockSessionEndTime: Date? // Track when the unblock session ends
+    @Published var isUnblocking: Bool = false // Track if currently unblocking
+
     private let activeSchedulesKey = "ActiveSchedules"
 
     init() {
@@ -79,7 +83,7 @@ class AppBlocker: ObservableObject {
     
     // Initialize timer for blocking
     var timer: Timer?
-    
+
     func startBlockingSchedule(schedule: BlockSchedule) {
         print("🔄 Starting blocking for schedule: \(schedule.formattedStartTime()) - \(schedule.formattedEndTime())")
         
@@ -125,6 +129,12 @@ class AppBlocker: ObservableObject {
         } catch {
             print("❌ Failed to start monitoring: \(error)")
         }
+
+        self.currentSchedule = schedule
+    }
+
+    func refreshSet() {
+        activeSchedules = []
     }
 
     func removeSchedule(schedule: BlockSchedule) {
@@ -260,10 +270,16 @@ class AppBlocker: ObservableObject {
             try deviceActivityCenter.startMonitoring(.once, during: tempSchedule)
             print("🔄 Monitor extension will start after \(seconds) seconds and run until \(blockEndHour):\(blockEndMinute).")
 
+            // Set unblock session details
+            self.isUnblocking = true
+            self.unblockSessionEndTime = Date().addingTimeInterval(seconds)
+
             // Schedule reinstatement of all original schedules
             DispatchQueue.main.asyncAfter(deadline: .now() + seconds + 1) { [weak self] in
                 guard let self = self else { return }
                 self.isTemporarilyUnblocked = false
+                self.isUnblocking = false
+                self.unblockSessionEndTime = nil
                 
                 // Restart all active schedules
                 for schedule in self.activeSchedules {
@@ -469,5 +485,25 @@ class AppBlocker: ObservableObject {
         }
         activeSchedulesText = schedulesDescription
         showActiveSchedulesAlert = true
+    }
+
+    func getDebugInfo() -> String {
+        var info = "Latest or Current Schedule: "
+        if let schedule = currentSchedule {
+            info += "\(schedule.formattedStartTime()) - \(schedule.formattedEndTime())"
+        } else {
+            info += "None"
+        }
+        
+        info += "\nUnblock Session: "
+        if isUnblocking, let endTime = unblockSessionEndTime {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm:ss" // Set the desired time format
+            info += "Unblocking until \(formatter.string(from: endTime))"
+        } else {
+            info += "Not currently unblocking"
+        }
+        
+        return info
     }
 }
