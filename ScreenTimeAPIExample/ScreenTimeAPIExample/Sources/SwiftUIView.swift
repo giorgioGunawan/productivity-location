@@ -26,6 +26,8 @@ struct SwiftUIView: View {
     @State private var currentSteps: Int = 0
     @State private var showingCelebration = false
     @State private var showingStepsWidget = false
+    @State private var showingDrawer = false
+    @State private var selectedSchedule: BlockSchedule?
     
     init() {
         let calendar = Calendar.current
@@ -66,39 +68,58 @@ struct SwiftUIView: View {
             }
             
             // Schedules List
-            List {
-                ForEach(model.schedules) { schedule in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Start: \(schedule.formattedStartTime())")
-                                .font(.system(size: 16, weight: .medium))
-                            Text("End: \(schedule.formattedEndTime())")
-                                .font(.system(size: 16, weight: .medium))
+            ScrollView {
+                VStack(spacing: 10) {
+                    ForEach(model.schedules) { schedule in
+                        VStack {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text("Start: \(schedule.formattedStartTime())")
+                                        .font(.system(size: 18, weight: .medium))
+                                        .foregroundColor(.primary)
+                                    Text("End: \(schedule.formattedEndTime())")
+                                        .font(.system(size: 18, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                if schedule.isActive {
+                                    Text("Active")
+                                        .foregroundColor(.green)
+                                        .font(.system(size: 16, weight: .bold))
+                                        .padding(6)
+                                        .background(Color.green.opacity(0.2))
+                                        .cornerRadius(8)
+                                }
+                            }
+                            .padding()
+                            .background(Color.gray.opacity(0.2)) // Grey card background
+                            .cornerRadius(12)
+                            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                            .onTapGesture {
+                                selectedSchedule = schedule
+                                showingDrawer.toggle() // Show the drawer when the card is tapped
+                            }
                         }
-                        Spacer()
-                        if schedule.isActive {
-                            Text("Active")
-                                .foregroundColor(.green)
-                                .font(.system(size: 14, weight: .bold))
-                        }
+                        .padding(.horizontal)
                     }
-                    .padding(.vertical, 8)
                 }
-                .onDelete { indexSet in
-                    // Get the schedules that are being deleted
-                    let schedulesToDelete = indexSet.map { model.schedules[$0] }
-                    
-                    // Remove them from the model
-                    model.schedules.remove(atOffsets: indexSet)
-                    
-                    // Check each deleted schedule
-                    for deletedSchedule in schedulesToDelete {
-                        appBlocker.removeAndCheckSchedule(deletedSchedule)
-                    }
+                .padding(.vertical, 8) // Space between cards
+            }
+            .background(Color(.systemBackground))
+            .sheet(isPresented: $showingDrawer) {
+                if let selectedSchedule = selectedSchedule {
+                    ScheduleDetailView(schedule: selectedSchedule, onDelete: {
+                        // Handle deletion
+                        if let index = model.schedules.firstIndex(where: { $0.id == selectedSchedule.id }) {
+                            model.schedules.remove(at: index)
+                            appBlocker.removeAndCheckSchedule(selectedSchedule)
+                        }
+                        showingDrawer = false // Close the drawer after deletion
+                    }, onClose: {
+                        showingDrawer = false // Close the drawer when the close button is pressed
+                    })
                 }
             }
-            .listStyle(InsetGroupedListStyle())
-            .background(Color(.systemBackground))
             
             // Steps Widget (only show when unblocking temporarily)
             if showingStepsWidget {
@@ -263,5 +284,34 @@ struct SwiftUIView: View {
             showingStepsWidget = true
         }
         appBlocker.unblockTemp()
+    }
+}
+
+// New View for Schedule Details
+struct ScheduleDetailView: View {
+    var schedule: BlockSchedule
+    var onDelete: () -> Void
+    var onClose: () -> Void // Closure to handle close action
+
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Schedule Details")) {
+                    Text("Start: \(schedule.formattedStartTime())")
+                    Text("End: \(schedule.formattedEndTime())")
+                    Text("Active: \(schedule.isActive ? "Yes" : "No")")
+                }
+                Section {
+                    Button(action: onDelete) {
+                        Text("Delete Schedule")
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+            .navigationTitle("Schedule Info")
+            .navigationBarItems(trailing: Button("Close") {
+                onClose() // Call the close action
+            })
+        }
     }
 }
