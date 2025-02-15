@@ -26,7 +26,6 @@ struct SwiftUIView: View {
     @State private var currentSteps: Int = 0
     @State private var showingCelebration = false
     @State private var showingStepsWidget = false
-    @State private var showingDrawer = false
     @State private var selectedSchedule: BlockSchedule?
     
     init() {
@@ -97,7 +96,6 @@ struct SwiftUIView: View {
                             .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
                             .onTapGesture {
                                 selectedSchedule = schedule
-                                showingDrawer.toggle() // Show the drawer when the card is tapped
                             }
                         }
                         .padding(.horizontal)
@@ -106,19 +104,16 @@ struct SwiftUIView: View {
                 .padding(.vertical, 8) // Space between cards
             }
             .background(Color(.systemBackground))
-            .sheet(isPresented: $showingDrawer) {
-                if let selectedSchedule = selectedSchedule {
-                    ScheduleDetailView(schedule: selectedSchedule, onDelete: {
-                        // Handle deletion
-                        if let index = model.schedules.firstIndex(where: { $0.id == selectedSchedule.id }) {
-                            model.schedules.remove(at: index)
-                            appBlocker.removeAndCheckSchedule(selectedSchedule)
-                        }
-                        showingDrawer = false // Close the drawer after deletion
-                    }, onClose: {
-                        showingDrawer = false // Close the drawer when the close button is pressed
-                    })
-                }
+            .sheet(item: $selectedSchedule) { schedule in
+                ScheduleDetailView(schedule: schedule, onDelete: {
+                    if let index = model.schedules.firstIndex(where: { $0.id == schedule.id }) {
+                        model.schedules.remove(at: index)
+                        appBlocker.removeAndCheckSchedule(schedule)
+                    }
+                    selectedSchedule = nil // Clear the selection instead of using showingDrawer
+                }, onClose: {
+                    selectedSchedule = nil // Clear the selection instead of using showingDrawer
+                })
             }
             
             // Steps Widget (only show when unblocking temporarily)
