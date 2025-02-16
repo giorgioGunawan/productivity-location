@@ -333,25 +333,60 @@ class AppBlocker: ObservableObject {
         }
     }
 
-    func unblockApplicationsTemporarily5minutes() {
+    func unblockApplicationsTemporarily15seconds() {
         print("🔓 Temporarily unblocking apps")
+        
+        // Stop the current monitoring before temporary unblock
+        stopMonitoring()
+        
         self.unblockAllApps()
-
-        // Schedule reblock after 300 seconds
-        unblockWithDeviceActivity(forDuration: 300, blockEndHour: blockEndHour, blockEndMinute: blockEndMinute)
+        
+        // Schedule reblock after 15 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in
+            guard let self = self else { return }
+            
+            // Reapply the original schedule if it should still be active
+            if self.isCurrentlyInAnyBlockWindow() {
+                // Restart monitoring with the original schedule
+                for schedule in self.activeSchedules {
+                    self.startBlockingSchedule(schedule: schedule)
+                }
+            } else {
+                // If we're outside any block window, just ensure apps stay unblocked
+                self.unblockAllApps()
+            }
+        }
+        
         // Reset step count after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.stepCount = 0
         }
     }
-    
-    // for debugging
-    func unblockApplicationsTemporarily15seconds() {
-        print("🔓 Temporarily unblocking apps")
-        self.unblockAllApps()
 
-        // Schedule reblock after 15 seconds
-        unblockWithDeviceActivity(forDuration: 15, blockEndHour: blockEndHour, blockEndMinute: blockEndMinute)
+    func unblockApplicationsTemporarily5minutes() {
+        print("🔓 Temporarily unblocking apps")
+        
+        // Stop the current monitoring before temporary unblock
+        stopMonitoring()
+        
+        self.unblockAllApps()
+        
+        // Schedule reblock after 300 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 300) { [weak self] in
+            guard let self = self else { return }
+            
+            // Reapply the original schedule if it should still be active
+            if self.isCurrentlyInAnyBlockWindow() {
+                // Restart monitoring with the original schedule
+                for schedule in self.activeSchedules {
+                    self.startBlockingSchedule(schedule: schedule)
+                }
+            } else {
+                // If we're outside any block window, just ensure apps stay unblocked
+                self.unblockAllApps()
+            }
+        }
+        
         // Reset step count after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.stepCount = 0

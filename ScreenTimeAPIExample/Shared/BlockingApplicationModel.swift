@@ -76,4 +76,9 @@ final class BlockingApplicationModel: ObservableObject {
             schedules = decoded
         }
     }
+    
+    func moveSchedule(from source: IndexSet, to destination: Int) {
+        schedules.move(fromOffsets: source, toOffset: destination)
+        saveSchedules() // Make sure the new order is persisted
+    }
 }
