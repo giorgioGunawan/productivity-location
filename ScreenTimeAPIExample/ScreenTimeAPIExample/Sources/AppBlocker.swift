@@ -4,6 +4,8 @@ import DeviceActivity
 import CoreMotion
 import Combine
 import UserNotifications
+import BackgroundTasks
+import UIKit
 
 extension DeviceActivityName {
     static let once = Self("once")
@@ -49,6 +51,10 @@ class AppBlocker: ObservableObject {
 
     private let activeSchedulesKey = "ActiveSchedules"
 
+    private var stepCountTimer: Timer?
+    private var reblockTimer: Timer?
+    private var backgroundTask: UIBackgroundTaskIdentifier = UIBackgroundTaskIdentifier.invalid
+
     init() {
         self.store = ManagedSettingsStore()
         self.model = BlockingApplicationModel.shared
@@ -58,6 +64,9 @@ class AppBlocker: ObservableObject {
         self.blockEndMinute = 0
         self.pedometer = CMPedometer()
         loadActiveSchedules()
+        
+        // Register for background task
+        registerBackgroundTask()
     }
     
     // Save active schedules to UserDefaults
@@ -179,9 +188,9 @@ class AppBlocker: ObservableObject {
         let endTime = blockEndHour * 60 + blockEndMinute
         
         if endTime < startTime {
-            return currentTime >= startTime || currentTime <= endTime
+            return currentTime >= startTime || currentTime < endTime
         } else {
-            return currentTime >= startTime && currentTime <= endTime
+            return currentTime >= startTime && currentTime < endTime
         }
     }
 
@@ -293,106 +302,119 @@ class AppBlocker: ObservableObject {
 
     
     func unblockTemp() {
-        hasReachedGoal = false
-        if CMPedometer.isStepCountingAvailable() {
-            // Reset step count when starting
-            DispatchQueue.main.async {
-                self.stepCount = 0
-            }
-            
-            let startTime = Date()
-            // Start counting steps with more frequent updates
-            pedometer?.startUpdates(from: startTime, withHandler: { [weak self] pedometerData, error in
-                guard let self = self else { return }
-                guard !self.hasReachedGoal else { return }
-                
-                guard let data = pedometerData, error == nil else {
-                    print("Error: \(error?.localizedDescription ?? "Unknown error")")
-                    return
-                }
-                
-                let steps = data.numberOfSteps.intValue
-                print("Raw steps from pedometer: \(steps)")
-                
-                // Ensure UI update happens on main thread
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    self.stepCount = steps
-                    print("Step count after update: \(self.stepCount)")
-                    
-                    if steps >= 15 && !self.hasReachedGoal {
-                        self.hasReachedGoal = true
-                        self.pedometer?.stopUpdates()
-                        // Show the final step count for a moment before unblocking
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                            self.unblockApplicationsTemporarily5minutes()
-                        }
-                    }
-                }
-            })
-        }
+        // Start background task
+        beginBackgroundTask()
+        
+        // Unblock apps
+        store.shield.applications = []
+        
+        // Schedule reblock
+        let reblockDate = Date().addingTimeInterval(5 * 60) // 5 minutes
+        scheduleReblock(at: reblockDate)
+        
+        // Start step counting
+        startStepCountUpdates()
     }
 
-    func unblockApplicationsTemporarily15seconds() {
-        print("🔓 Temporarily unblocking apps")
+    private func scheduleReblock(at date: Date) {
+        // Cancel any existing timer
+        reblockTimer?.invalidate()
         
-        // Stop the current monitoring before temporary unblock
-        stopMonitoring()
-        
-        self.unblockAllApps()
-        
-        // Schedule reblock after 15 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in
-            guard let self = self else { return }
-            
-            // Reapply the original schedule if it should still be active
-            if self.isCurrentlyInAnyBlockWindow() {
-                // Restart monitoring with the original schedule
-                for schedule in self.activeSchedules {
-                    self.startBlockingSchedule(schedule: schedule)
-                }
-            } else {
-                // If we're outside any block window, just ensure apps stay unblocked
-                self.unblockAllApps()
-            }
+        // Create new timer
+        reblockTimer = Timer.scheduledTimer(withTimeInterval: date.timeIntervalSinceNow, repeats: false) { [weak self] _ in
+            self?.reblockApps()
         }
         
-        // Reset step count after a short delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            self.stepCount = 0
+        // Make sure timer runs even when app is in background
+        if let timer = reblockTimer {
+            RunLoop.main.add(timer, forMode: .common)
         }
+        
+        // Schedule local notification
+        scheduleReblockNotification(at: date)
     }
-
-    func unblockApplicationsTemporarily5minutes() {
-        print("🔓 Temporarily unblocking apps")
-        
-        // Stop the current monitoring before temporary unblock
-        stopMonitoring()
-        
-        self.unblockAllApps()
-        
-        // Schedule reblock after 300 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 300) { [weak self] in
-            guard let self = self else { return }
-            
-            // Reapply the original schedule if it should still be active
-            if self.isCurrentlyInAnyBlockWindow() {
-                // Restart monitoring with the original schedule
-                for schedule in self.activeSchedules {
-                    self.startBlockingSchedule(schedule: schedule)
-                }
-            } else {
-                // If we're outside any block window, just ensure apps stay unblocked
-                self.unblockAllApps()
-            }
+    
+    private func reblockApps() {
+        // Reblock apps using the stored selection
+        if let model = try? BlockingApplicationModel.shared {
+            store.shield.applications = model.selectedAppsTokens
         }
         
-        // Reset step count after a short delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            self.stepCount = 0
+        // End background task if running
+        endBackgroundTask()
+        
+        // Stop step counting
+        stopStepCountUpdates()
+    }
+    
+    private func scheduleReblockNotification(at date: Date) {
+        let content = UNMutableNotificationContent()
+        content.title = "Apps Reblocked"
+        content.body = "Your temporary unblock period has ended."
+        content.sound = .default
+        
+        let trigger = UNCalendarNotificationTrigger(
+            dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date),
+            repeats: false
+        )
+        
+        let request = UNNotificationRequest(
+            identifier: "reblock",
+            content: content,
+            trigger: trigger
+        )
+        
+        UNUserNotificationCenter.current().add(request)
+    }
+    
+    private func beginBackgroundTask() {
+        backgroundTask = UIApplication.shared.beginBackgroundTask { [weak self] in
+            self?.endBackgroundTask()
+            // When background task expires, make sure to reblock
+            self?.reblockApps()
         }
     }
     
+    private func endBackgroundTask() {
+        if backgroundTask != .invalid {
+            UIApplication.shared.endBackgroundTask(backgroundTask)
+            backgroundTask = .invalid
+        }
+    }
+    
+    private func registerBackgroundTask() {
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: "com.productivityone.reblock",
+            using: nil
+        ) { task in
+            self.handleBackgroundTask(task as! BGAppRefreshTask)
+        }
+    }
+    
+    private func handleBackgroundTask(_ task: BGAppRefreshTask) {
+        // Schedule next background task
+        scheduleBackgroundTask()
+        
+        // Check if we need to reblock
+        if let reblockDate = UserDefaults.standard.object(forKey: "reblockDate") as? Date,
+           Date() >= reblockDate {
+            reblockApps()
+        }
+        
+        task.setTaskCompleted(success: true)
+    }
+    
+    func scheduleBackgroundTask() {
+        let request = BGAppRefreshTaskRequest(identifier: "com.productivityone.reblock")
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 60) // Schedule for 1 minute from now
+        
+        do {
+            try BGTaskScheduler.shared.submit(request)
+        } catch {
+            print("Could not schedule background task: \(error)")
+        }
+    }
+
     // Enum for error handling
     enum BlockerError: Error {
         case invalidTimeWindow
@@ -540,5 +562,81 @@ class AppBlocker: ObservableObject {
         }
         
         return info
+    }
+
+    func startStepCountUpdates() {
+        hasReachedGoal = false
+        if CMPedometer.isStepCountingAvailable() {
+            // Reset step count when starting
+            DispatchQueue.main.async {
+                self.stepCount = 0
+            }
+            
+            let startTime = Date()
+            pedometer?.startUpdates(from: startTime) { [weak self] pedometerData, error in
+                guard let self = self else { return }
+                guard !self.hasReachedGoal else { return }
+                
+                guard let data = pedometerData, error == nil else {
+                    print("Error: \(error?.localizedDescription ?? "Unknown error")")
+                    return
+                }
+                
+                let steps = data.numberOfSteps.intValue
+                print("Raw steps from pedometer: \(steps)")
+                
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    self.stepCount = steps
+                    print("Step count after update: \(self.stepCount)")
+                    
+                    if steps >= 15 && !self.hasReachedGoal {
+                        self.hasReachedGoal = true
+                        self.pedometer?.stopUpdates()
+                        // Save reblock date to UserDefaults
+                        UserDefaults.standard.set(Date().addingTimeInterval(5 * 60), forKey: "reblockDate")
+                    }
+                }
+            }
+        }
+    }
+
+    // Add these functions to the AppBlocker class
+    func unblockApplicationsTemporarily15seconds() {
+        // Start background task
+        beginBackgroundTask()
+        
+        // Unblock apps
+        store.shield.applications = []
+        
+        // Schedule reblock
+        let reblockDate = Date().addingTimeInterval(15)
+        scheduleReblock(at: reblockDate)
+        
+        // Save reblock date to UserDefaults
+        UserDefaults.standard.set(reblockDate, forKey: "reblockDate")
+        UserDefaults.standard.synchronize()
+        
+        // Schedule notification
+        scheduleBlockNotification(after: 15)
+    }
+
+    func unblockApplicationsTemporarily5minutes() {
+        // Start background task
+        beginBackgroundTask()
+        
+        // Unblock apps
+        store.shield.applications = []
+        
+        // Schedule reblock
+        let reblockDate = Date().addingTimeInterval(5 * 60)
+        scheduleReblock(at: reblockDate)
+        
+        // Save reblock date to UserDefaults
+        UserDefaults.standard.set(reblockDate, forKey: "reblockDate")
+        UserDefaults.standard.synchronize()
+        
+        // Schedule notification
+        scheduleBlockNotification(after: 5 * 60)
     }
 }
