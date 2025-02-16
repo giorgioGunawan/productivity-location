@@ -26,7 +26,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         super.intervalDidEnd(for: activity)
         
         // Unblock apps when schedule ends
-        store.shield.applications = nil
+        store.shield.applications = []
         
         print("🔓 Monitor Extension: Blocking ended at: \(Date())")
     }

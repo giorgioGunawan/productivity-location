@@ -42,7 +42,6 @@ final class BlockingApplicationModel: ObservableObject {
             let encodedData = try JSONEncoder().encode(selectedAppsTokens)
             groupUserDefaults.set(encodedData, forKey: selectedAppsKey)
             groupUserDefaults.synchronize()
-            print("✅ Saved tokens to shared storage")
         } catch {
             print("❌ Failed to encode tokens: \(error)")
         }
@@ -76,5 +75,10 @@ final class BlockingApplicationModel: ObservableObject {
            let decoded = try? JSONDecoder().decode([BlockSchedule].self, from: data) {
             schedules = decoded
         }
+    }
+    
+    func moveSchedule(from source: IndexSet, to destination: Int) {
+        schedules.move(fromOffsets: source, toOffset: destination)
+        saveSchedules() // Make sure the new order is persisted
     }
 }

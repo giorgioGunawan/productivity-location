@@ -381,13 +381,43 @@ final class ViewController: UIViewController {
             print("🎯 Starting temporary unblock")
             guard let self = self else { return }
             
-            appBlocker.unblockApplicationsTemporarily()
+            appBlocker.unblockApplicationsTemporarily15seconds()
+            print("🎯 Unblock command sent")
+        })
+
+        alert.addAction(UIAlertAction(title: "Unblock 5 mins", style: .default) { [weak self] _ in
+            print("🎯 Starting temporary unblock")
+            guard let self = self else { return }
+            
+            appBlocker.unblockApplicationsTemporarily5minutes()
             print("🎯 Unblock command sent")
         })
         
+        alert.addAction(UIAlertAction(title: "Show Active Schedules", style: .default) { [weak self] _ in
+            guard let self = self else { return }
+            self.showActiveSchedules()
+        })
+        
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        alert.addAction(UIAlertAction(title: "Debug Active Schedules", style: .default) { [weak self] _ in
+            guard let self = self else { return }
+            self.debugActiveSchedules()
+        })
+
+        alert.addAction(UIAlertAction(title: "Refresh Set", style: .default) { [weak self] _ in
+            guard let self = self else { return }
+            appBlocker.refreshSet()
+        })
         
         present(alert, animated: true)
+    }
+    // Method to show active schedules
+    private func debugActiveSchedules() {
+        let debugInfo = appBlocker.getDebugInfo() // Get the debug information
+        let alert = UIAlertController(title: "Debug Active Schedules", message: debugInfo, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        present(alert, animated: true, completion: nil)
     }
     
     private func setupOnboardingObserver() {
@@ -415,17 +445,53 @@ final class ViewController: UIViewController {
     
     @objc private func handleOnboardingCompleted() {
         print("🟣 Handling onboarding completion")
-        DispatchQueue.main.async { [weak self] in
+        
+        // First request Screen Time authorization
+        Task { [weak self] in
             guard let self = self else { return }
-            let model = BlockingApplicationModel.shared
-            let newView = SwiftUIView().environmentObject(model)
-            self._contentView.rootView = AnyView(newView)
-            print("🟣 Updated root view to SwiftUIView")
+            do {
+                try await self._center.requestAuthorization(for: .individual)
+                print("✅ Screen Time authorization successfully requested")
+                
+                // Then request notification permissions
+                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+                    if granted {
+                        print("✅ Notification permission granted")
+                    } else if let error = error {
+                        print("❌ Error requesting notification permissions: \(error)")
+                    }
+                    
+                    // Update UI after both permissions are handled
+                    DispatchQueue.main.async {
+                        let model = BlockingApplicationModel.shared
+                        let newView = SwiftUIView().environmentObject(model)
+                        self._contentView.rootView = AnyView(newView)
+                        print("🟣 Updated root view to SwiftUIView")
+                    }
+                }
+            } catch {
+                print("❌ Screen Time authorization request failed: \(error)")
+            }
         }
     }
     
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+    
+    // Method to show active schedules
+    private func showActiveSchedules() {
+        var schedulesDescription = ""
+        for schedule in appBlocker.activeSchedules {
+            schedulesDescription += "SID: \(String(schedule.id.uuidString.prefix(5))), \(schedule.formattedStartTime()) - \(schedule.formattedEndTime())\n"
+        }
+
+        if(schedulesDescription == ""){
+            schedulesDescription = "No Schedule"
+        }
+        let alert = UIAlertController(title: "Active Schedules", message: schedulesDescription, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        present(alert, animated: true, completion: nil)
     }
 }
 
@@ -465,6 +531,14 @@ extension ViewController {
                 print(error.localizedDescription)
                 print("❌ Authorization request failed: \(error)")
                 print("Error details: \(error.localizedDescription)")
+            }
+        }
+
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] granted, error in
+            if granted {
+                print("✅ Notification permission granted")
+            } else if let error = error {
+                print("❌ Error requesting notification permissions: \(error)")
             }
         }
     }
