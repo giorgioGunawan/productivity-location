@@ -14,6 +14,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             rootViewController: viewController
         )
     }
+    
+    func sceneDidEnterBackground(_ scene: UIScene) {
+        // Schedule background task when app enters background
+        if let appBlocker = try? AppBlocker.shared {
+            appBlocker.scheduleBackgroundTask()
+        }
+    }
 }
 
 // MARK: - Private Function
