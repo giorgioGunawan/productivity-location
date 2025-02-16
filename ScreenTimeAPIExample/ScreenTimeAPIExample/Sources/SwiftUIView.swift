@@ -46,9 +46,6 @@ struct SwiftUIView: View {
         VStack(spacing: Theme.standardPadding) {
             // Header
             HStack {
-                Text("App Control")
-                    .font(Theme.titleStyle)
-                    .foregroundColor(.primary)
                 Spacer()
                 Button(action: { isPresented.toggle() }) {
                     HStack {
@@ -138,8 +135,14 @@ struct SwiftUIView: View {
             .padding(.bottom, Theme.standardPadding)
             
             if showingStepsWidget {
-                StepsWidget(currentSteps: currentSteps)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                StepsWidget(currentSteps: currentSteps) {
+                    withAnimation {
+                        showingStepsWidget = false
+                    }
+                    appBlocker.stopStepCountUpdates()
+                    appBlocker.unblockAllApps()
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .background(Color(.systemGroupedBackground))
@@ -147,6 +150,13 @@ struct SwiftUIView: View {
         .sheet(isPresented: $showingAddSchedule) {
             NavigationView {
                 Form {
+                    Section {
+                        TextField("Schedule Name", text: .init(
+                            get: { model.newScheduleName },
+                            set: { model.newScheduleName = $0 }
+                        ))
+                    }
+                    
                     Section {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Start Time")
@@ -213,10 +223,12 @@ struct SwiftUIView: View {
                             startHour: scheduleStartHour,
                             startMinute: scheduleStartMinute,
                             endHour: scheduleEndHour,
-                            endMinute: scheduleEndMinute
+                            endMinute: scheduleEndMinute,
+                            name: model.newScheduleName
                         )
                         model.schedules.append(newSchedule)
                         appBlocker.startBlockingSchedule(schedule: newSchedule)
+                        model.newScheduleName = "New Schedule"
                         showingAddSchedule = false
                     }
                     .font(.headline)
@@ -235,7 +247,14 @@ struct SwiftUIView: View {
         }
         .sheet(item: $selectedSchedule) { schedule in
             ScheduleDetailView(
-                schedule: schedule,
+                schedule: Binding(
+                    get: { schedule },
+                    set: { newSchedule in
+                        if let index = model.schedules.firstIndex(where: { $0.id == schedule.id }) {
+                            model.schedules[index] = newSchedule
+                        }
+                    }
+                ),
                 onDelete: {
                     if let index = model.schedules.firstIndex(where: { $0.id == schedule.id }) {
                         model.schedules.remove(at: index)
@@ -275,13 +294,28 @@ struct SwiftUIView: View {
 
 // New View for Schedule Details
 struct ScheduleDetailView: View {
-    var schedule: BlockSchedule
+    @Binding var schedule: BlockSchedule
     var onDelete: () -> Void
     var onClose: () -> Void
+    @State private var name: String
+    
+    init(schedule: Binding<BlockSchedule>, onDelete: @escaping () -> Void, onClose: @escaping () -> Void) {
+        self._schedule = schedule
+        self._name = State(initialValue: schedule.wrappedValue.name)
+        self.onDelete = onDelete
+        self.onClose = onClose
+    }
     
     var body: some View {
         NavigationView {
             List {
+                Section {
+                    TextField("Schedule Name", text: $name)
+                        .onChange(of: name) { newValue in
+                            schedule.name = newValue
+                        }
+                }
+                
                 Section {
                     DetailRow(title: "Start Time", value: schedule.formattedStartTime())
                     DetailRow(title: "End Time", value: schedule.formattedEndTime())
@@ -359,13 +393,21 @@ struct ScheduleCard: View {
         Button(action: onTap) {
             HStack {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(schedule.formattedStartTime())
+                    Text(schedule.name)
                         .font(Theme.subtitleStyle)
                         .foregroundColor(.primary)
                     
-                    Text(schedule.formattedEndTime())
-                        .font(Theme.bodyStyle)
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 4) {
+                        Text(schedule.formattedStartTime())
+                            .font(Theme.bodyStyle)
+                            .foregroundColor(.secondary)
+                        Text("-")
+                            .font(Theme.bodyStyle)
+                            .foregroundColor(.secondary)
+                        Text(schedule.formattedEndTime())
+                            .font(Theme.bodyStyle)
+                            .foregroundColor(.secondary)
+                    }
                 }
                 
                 Spacer()
@@ -390,12 +432,23 @@ struct ScheduleCard: View {
 
 struct StepsWidget: View {
     let currentSteps: Int
+    var onClose: () -> Void
     
     var body: some View {
         VStack {
-            Text("Steps to Unlock")
-                .font(Theme.titleStyle)
-                .foregroundColor(.white)
+            HStack {
+                Text("Steps to Unlock")
+                    .font(Theme.titleStyle)
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                Button(action: onClose) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+            }
             
             ZStack {
                 // Background circle
