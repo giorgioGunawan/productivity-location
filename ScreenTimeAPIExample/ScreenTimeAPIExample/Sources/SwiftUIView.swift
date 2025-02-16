@@ -27,6 +27,7 @@ struct SwiftUIView: View {
     @State private var showingCelebration = false
     @State private var showingStepsWidget = false
     @State private var selectedSchedule: BlockSchedule?
+    @State private var editMode = EditMode.inactive
     
     init() {
         let calendar = Calendar.current
@@ -70,23 +71,37 @@ struct SwiftUIView: View {
             .padding(.top, Theme.standardPadding)
             
             // Schedules List
-            ScrollView {
-                VStack(spacing: Theme.standardPadding) {
-                    ForEach(model.schedules) { schedule in
-                        ScheduleCard(schedule: schedule) {
-                            selectedSchedule = schedule
-                        }
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Theme.standardCornerRadius)
-                                .stroke(Theme.mainPurple.opacity(0.3), lineWidth: 1)
-                        )
+            List {
+                ForEach(model.schedules) { schedule in
+                    ScheduleCard(schedule: schedule) {
+                        HapticManager.shared.impact(style: .medium)
+                        selectedSchedule = schedule
                     }
-                    .onMove { from, to in
-                        model.schedules.move(fromOffsets: from, toOffset: to)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.standardCornerRadius)
+                            .stroke(Theme.mainPurple.opacity(0.3), lineWidth: 2)
+                    )
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                }
+                .onMove { source, destination in
+                    HapticManager.shared.impact(style: .light)
+                    model.moveSchedule(from: source, to: destination)
+                }
+            }
+            .listStyle(PlainListStyle())
+            .environment(\.editMode, $editMode)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        HapticManager.shared.impact(style: .medium)
+                        editMode = editMode == .active ? .inactive : .active
+                    }) {
+                        Image(systemName: editMode == .active ? "checkmark.circle.fill" : "list.bullet")
+                            .foregroundColor(Theme.mainPurple)
                     }
                 }
             }
-            .padding(.horizontal, Theme.standardPadding)
             
             // Action Buttons
             VStack(spacing: Theme.standardPadding) {
@@ -192,6 +207,7 @@ struct SwiftUIView: View {
                     }
                     .foregroundColor(Theme.mainPurple),
                     trailing: Button("Save") {
+                        HapticManager.shared.notification(type: .success)
                         let newSchedule = BlockSchedule(
                             startHour: scheduleStartHour,
                             startMinute: scheduleStartMinute,
@@ -248,6 +264,7 @@ struct SwiftUIView: View {
     }
     
     private func unblockTemp() {
+        HapticManager.shared.impact(style: .medium)
         withAnimation {
             showingStepsWidget = true
         }
@@ -271,7 +288,10 @@ struct ScheduleDetailView: View {
                 }
                 
                 Section {
-                    Button(action: onDelete) {
+                    Button(action: {
+                        HapticManager.shared.notification(type: .warning)
+                        onDelete()
+                    }) {
                         HStack {
                             Image(systemName: "trash.fill")
                             Text("Delete Schedule")
@@ -412,6 +432,13 @@ struct StepsWidget: View {
                 .shadow(radius: 10)
         )
         .padding()
+        .onChange(of: currentSteps) { newValue in
+            if newValue == 15 {
+                HapticManager.shared.notification(type: .success)
+            } else {
+                HapticManager.shared.impact(style: .light)
+            }
+        }
     }
 }
 
@@ -430,5 +457,23 @@ struct TimePickerField: View {
         .pickerStyle(.wheel)
         .frame(width: 100)
         .clipped()
+    }
+}
+
+class HapticManager {
+    static let shared = HapticManager()
+    
+    private init() {}
+    
+    func impact(style: UIImpactFeedbackGenerator.FeedbackStyle) {
+        let generator = UIImpactFeedbackGenerator(style: style)
+        generator.prepare()
+        generator.impactOccurred()
+    }
+    
+    func notification(type: UINotificationFeedbackGenerator.FeedbackType) {
+        let generator = UINotificationFeedbackGenerator()
+        generator.prepare()
+        generator.notificationOccurred(type)
     }
 }
