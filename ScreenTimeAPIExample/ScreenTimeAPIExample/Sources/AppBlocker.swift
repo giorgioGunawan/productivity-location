@@ -335,9 +335,12 @@ class AppBlocker: ObservableObject {
     }
     
     private func reblockApps() {
-        // Reblock apps using the stored selection
-        if let model = try? BlockingApplicationModel.shared {
-            store.shield.applications = model.selectedAppsTokens
+        // Only reblock if we're currently within a blocking window
+        if isCurrentlyInAnyBlockWindow() {
+            // Reblock apps using the stored selection
+            if let model = try? BlockingApplicationModel.shared {
+                store.shield.applications = model.selectedAppsTokens
+            }
         }
         
         // End background task if running

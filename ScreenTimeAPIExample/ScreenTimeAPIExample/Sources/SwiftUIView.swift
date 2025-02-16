@@ -83,6 +83,7 @@ struct SwiftUIView: View {
                     )
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    .listRowSeparator(.hidden)
                 }
                 .onMove { source, destination in
                     HapticManager.shared.impact(style: .light)
