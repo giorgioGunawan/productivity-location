@@ -434,62 +434,136 @@ struct StepsWidget: View {
     let currentSteps: Int
     var onClose: () -> Void
     
+    // Animation states
+    @State private var isRotating = false
+    @State private var isGlowing = false
+    
     var body: some View {
-        VStack {
+        VStack(spacing: 24) {
+            // Header with close button
             HStack {
-                Text("Steps to Unlock")
-                    .font(Theme.titleStyle)
+                Label("Break Time", systemImage: "figure.walk.motion")
+                    .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.white)
                 
                 Spacer()
                 
                 Button(action: onClose) {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 24))
+                        .font(.system(size: 28))
                         .foregroundColor(.white.opacity(0.7))
+                        .shadow(radius: 2)
                 }
             }
             
+            // Progress Circle
             ZStack {
-                // Background circle
+                // Outer glow
                 Circle()
-                    .stroke(Theme.mainPurple.opacity(0.2), lineWidth: 12)
+                    .stroke(Theme.mainGradient, lineWidth: 1)
+                    .blur(radius: 8)
+                    .opacity(isGlowing ? 0.8 : 0.4)
+                    .frame(width: 220, height: 220)
+                
+                // Background circles
+                Circle()
+                    .stroke(Color.white.opacity(0.1), lineWidth: 20)
                     .frame(width: 200, height: 200)
+                
+                Circle()
+                    .stroke(Theme.mainPurple.opacity(0.2), lineWidth: 20)
+                    .frame(width: 200, height: 200)
+                
+                // Animated dots around the circle
+                ForEach(0..<8) { index in
+                    Circle()
+                        .fill(Theme.mainGradient)
+                        .frame(width: 8, height: 8)
+                        .offset(y: -100)
+                        .rotationEffect(.degrees(Double(index) * 45))
+                        .rotationEffect(.degrees(isRotating ? 360 : 0))
+                        .opacity(currentSteps > 0 ? 1 : 0)
+                }
                 
                 // Progress circle
                 Circle()
                     .trim(from: 0, to: CGFloat(min(currentSteps, 15)) / 15.0)
                     .stroke(
                         Theme.mainGradient,
-                        style: StrokeStyle(lineWidth: 12, lineCap: .round)
+                        style: StrokeStyle(lineWidth: 20, lineCap: .round)
                     )
                     .frame(width: 200, height: 200)
                     .rotationEffect(.degrees(-90))
-                    .animation(.spring(), value: currentSteps)
+                    .animation(.spring(response: 0.6), value: currentSteps)
                 
-                // Steps counter
-                VStack(spacing: 4) {
+                // Center content
+                VStack(spacing: 8) {
                     Text("\(currentSteps)")
-                        .font(.system(size: 48, weight: .bold))
+                        .font(.system(size: 56, weight: .bold))
                         .foregroundColor(.white)
-                    Text("/ 15 steps")
-                        .font(Theme.subtitleStyle)
+                        .contentTransition(.numericText())
+                    
+                    Text("steps to unlock")
+                        .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.white.opacity(0.7))
                 }
             }
-            .padding(.vertical, Theme.standardPadding)
+            .padding(.vertical, 20)
+            
+            // Progress text
+            Text("\(15 - currentSteps) steps remaining")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundColor(.white.opacity(0.9))
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(
+                    Capsule()
+                        .fill(Color.white.opacity(0.1))
+                )
         }
-        .padding(Theme.standardPadding)
+        .padding(32)
         .background(
-            RoundedRectangle(cornerRadius: Theme.largeCornerRadius)
-                .fill(Color.black.opacity(0.8))
-                .shadow(radius: 10)
+            ZStack {
+                // Gradient background
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.black.opacity(0.8),
+                        Color(red: 0.2, green: 0.2, blue: 0.3).opacity(0.9)
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                
+                // Animated background particles
+                ForEach(0..<15) { index in
+                    Circle()
+                        .fill(Theme.mainGradient)
+                        .frame(width: 4, height: 4)
+                        .blur(radius: 1)
+                        .opacity(0.5)
+                        .offset(x: .random(in: -100...100), y: .random(in: -100...100))
+                }
+            }
         )
-        .padding()
+        .clipShape(RoundedRectangle(cornerRadius: 32))
+        .overlay(
+            RoundedRectangle(cornerRadius: 32)
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+        )
+        .shadow(color: Theme.mainPurple.opacity(0.3), radius: 20, x: 0, y: 10)
+        .padding(.horizontal, 20)
+        .onAppear {
+            withAnimation(.linear(duration: 8).repeatForever(autoreverses: false)) {
+                isRotating = true
+            }
+            withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true)) {
+                isGlowing = true
+            }
+        }
         .onChange(of: currentSteps) { newValue in
             if newValue == 15 {
                 HapticManager.shared.notification(type: .success)
-            } else {
+            } else if newValue > 0 {
                 HapticManager.shared.impact(style: .light)
             }
         }
