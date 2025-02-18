@@ -398,6 +398,12 @@ final class ViewController: UIViewController {
             self.showActiveSchedules()
         })
         
+        alert.addAction(UIAlertAction(title: "Show Logs", style: .default) { [weak self] _ in
+            guard let self = self else { return }
+            let loggerVC = UIHostingController(rootView: LoggerView())
+            self.present(loggerVC, animated: true)
+        })
+        
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
 
         alert.addAction(UIAlertAction(title: "Debug Active Schedules", style: .default) { [weak self] _ in

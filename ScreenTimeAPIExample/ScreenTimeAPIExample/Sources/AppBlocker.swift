@@ -6,6 +6,7 @@ import Combine
 import UserNotifications
 import BackgroundTasks
 import UIKit
+import SwiftUI
 
 extension DeviceActivityName {
     static let once = Self("once")
@@ -94,7 +95,7 @@ class AppBlocker: ObservableObject {
     var timer: Timer?
 
     func startBlockingSchedule(schedule: BlockSchedule) {
-        print("🔄 Starting blocking for schedule: \(schedule.formattedStartTime()) - \(schedule.formattedEndTime())")
+        Logger.shared.log("Starting blocking for schedule: \(schedule.formattedStartTime()) - \(schedule.formattedEndTime())")
         
         // Add to active schedules
         activeSchedules.insert(schedule)
@@ -126,17 +127,17 @@ class AppBlocker: ObservableObject {
                                         blockStartMinute: schedule.startMinute,
                                         blockEndHour: schedule.endHour,
                                         blockEndMinute: schedule.endMinute) {
-                print("📱 Currently within schedule window - blocking apps")
+                Logger.shared.log("Currently within schedule window - blocking apps", type: .success)
                 // This is not technically needed, since startMonitoring will block
                 // but this makes it instant, while startMonitoring can have a bit of delay
                 store.shield.applications = model.selectedAppsTokens
             } else {
-                print("⏳ Outside schedule window - waiting for start time")
+                Logger.shared.log("Outside schedule window - waiting for start time", type: .warning)
             }
             
-            print("✅ Monitoring started successfully")
+            Logger.shared.log("Monitor extension started successfully", type: .success)
         } catch {
-            print("❌ Failed to start monitoring: \(error)")
+            Logger.shared.log("Failed to start monitoring: \(error)", type: .error)
         }
 
         self.currentSchedule = schedule
