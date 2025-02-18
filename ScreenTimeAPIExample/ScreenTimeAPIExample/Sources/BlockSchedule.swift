@@ -9,14 +9,16 @@ import Foundation
 
 public struct BlockSchedule: Codable, Identifiable, Hashable {
     public let id: UUID
+    public var name: String
     public let startHour: Int
     public let startMinute: Int
     public let endHour: Int
     public let endMinute: Int
     public var isActive: Bool
     
-    public init(startHour: Int, startMinute: Int, endHour: Int, endMinute: Int, isActive: Bool = true) {
+    public init(startHour: Int, startMinute: Int, endHour: Int, endMinute: Int, name: String = "New Schedule", isActive: Bool = true) {
         self.id = UUID()
+        self.name = name
         self.startHour = startHour
         self.startMinute = startMinute
         self.endHour = endHour
@@ -35,6 +37,7 @@ public struct BlockSchedule: Codable, Identifiable, Hashable {
     // Implementing Hashable
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+        hasher.combine(name)
         hasher.combine(startHour)
         hasher.combine(startMinute)
         hasher.combine(endHour)
@@ -43,6 +46,7 @@ public struct BlockSchedule: Codable, Identifiable, Hashable {
 
     public static func == (lhs: BlockSchedule, rhs: BlockSchedule) -> Bool {
         return lhs.id == rhs.id &&
+               lhs.name == rhs.name &&
                lhs.startHour == rhs.startHour &&
                lhs.startMinute == rhs.startMinute &&
                lhs.endHour == rhs.endHour &&

@@ -46,9 +46,6 @@ struct SwiftUIView: View {
         VStack(spacing: Theme.standardPadding) {
             // Header
             HStack {
-                Text("App Control")
-                    .font(Theme.titleStyle)
-                    .foregroundColor(.primary)
                 Spacer()
                 Button(action: { isPresented.toggle() }) {
                     HStack {
@@ -83,6 +80,7 @@ struct SwiftUIView: View {
                     )
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    .listRowSeparator(.hidden)
                 }
                 .onMove { source, destination in
                     HapticManager.shared.impact(style: .light)
@@ -137,8 +135,14 @@ struct SwiftUIView: View {
             .padding(.bottom, Theme.standardPadding)
             
             if showingStepsWidget {
-                StepsWidget(currentSteps: currentSteps)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                StepsWidget(currentSteps: currentSteps) {
+                    withAnimation {
+                        showingStepsWidget = false
+                    }
+                    appBlocker.stopStepCountUpdates()
+                    appBlocker.unblockAllApps()
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .background(Color(.systemGroupedBackground))
@@ -146,6 +150,13 @@ struct SwiftUIView: View {
         .sheet(isPresented: $showingAddSchedule) {
             NavigationView {
                 Form {
+                    Section {
+                        TextField("Schedule Name", text: .init(
+                            get: { model.newScheduleName },
+                            set: { model.newScheduleName = $0 }
+                        ))
+                    }
+                    
                     Section {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Start Time")
@@ -212,10 +223,12 @@ struct SwiftUIView: View {
                             startHour: scheduleStartHour,
                             startMinute: scheduleStartMinute,
                             endHour: scheduleEndHour,
-                            endMinute: scheduleEndMinute
+                            endMinute: scheduleEndMinute,
+                            name: model.newScheduleName
                         )
                         model.schedules.append(newSchedule)
                         appBlocker.startBlockingSchedule(schedule: newSchedule)
+                        model.newScheduleName = "New Schedule"
                         showingAddSchedule = false
                     }
                     .font(.headline)
@@ -234,10 +247,19 @@ struct SwiftUIView: View {
         }
         .sheet(item: $selectedSchedule) { schedule in
             ScheduleDetailView(
-                schedule: schedule,
+                schedule: Binding(
+                    get: { schedule },
+                    set: { newSchedule in
+                        if let index = model.schedules.firstIndex(where: { $0.id == schedule.id }) {
+                            model.schedules[index] = newSchedule
+                        }
+                    }
+                ),
                 onDelete: {
                     if let index = model.schedules.firstIndex(where: { $0.id == schedule.id }) {
+                        let deletedSchedule = model.schedules[index]
                         model.schedules.remove(at: index)
+                        appBlocker.removeAndCheckSchedule(deletedSchedule)
                         selectedSchedule = nil
                     }
                 },
@@ -274,13 +296,28 @@ struct SwiftUIView: View {
 
 // New View for Schedule Details
 struct ScheduleDetailView: View {
-    var schedule: BlockSchedule
+    @Binding var schedule: BlockSchedule
     var onDelete: () -> Void
     var onClose: () -> Void
+    @State private var name: String
+    
+    init(schedule: Binding<BlockSchedule>, onDelete: @escaping () -> Void, onClose: @escaping () -> Void) {
+        self._schedule = schedule
+        self._name = State(initialValue: schedule.wrappedValue.name)
+        self.onDelete = onDelete
+        self.onClose = onClose
+    }
     
     var body: some View {
         NavigationView {
             List {
+                Section {
+                    TextField("Schedule Name", text: $name)
+                        .onChange(of: name) { newValue in
+                            schedule.name = newValue
+                        }
+                }
+                
                 Section {
                     DetailRow(title: "Start Time", value: schedule.formattedStartTime())
                     DetailRow(title: "End Time", value: schedule.formattedEndTime())
@@ -358,13 +395,21 @@ struct ScheduleCard: View {
         Button(action: onTap) {
             HStack {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(schedule.formattedStartTime())
+                    Text(schedule.name)
                         .font(Theme.subtitleStyle)
                         .foregroundColor(.primary)
                     
-                    Text(schedule.formattedEndTime())
-                        .font(Theme.bodyStyle)
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 4) {
+                        Text(schedule.formattedStartTime())
+                            .font(Theme.bodyStyle)
+                            .foregroundColor(.secondary)
+                        Text("-")
+                            .font(Theme.bodyStyle)
+                            .foregroundColor(.secondary)
+                        Text(schedule.formattedEndTime())
+                            .font(Theme.bodyStyle)
+                            .foregroundColor(.secondary)
+                    }
                 }
                 
                 Spacer()
@@ -389,53 +434,138 @@ struct ScheduleCard: View {
 
 struct StepsWidget: View {
     let currentSteps: Int
+    var onClose: () -> Void
+    
+    // Animation states
+    @State private var isRotating = false
+    @State private var isGlowing = false
     
     var body: some View {
-        VStack {
-            Text("Steps to Unlock")
-                .font(Theme.titleStyle)
-                .foregroundColor(.white)
+        VStack(spacing: 24) {
+            // Header with close button
+            HStack {
+                Label("Break Time", systemImage: "figure.walk.motion")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                Button(action: onClose) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundColor(.white.opacity(0.7))
+                        .shadow(radius: 2)
+                }
+            }
             
+            // Progress Circle
             ZStack {
-                // Background circle
+                // Outer glow
                 Circle()
-                    .stroke(Theme.mainPurple.opacity(0.2), lineWidth: 12)
+                    .stroke(Theme.mainGradient, lineWidth: 1)
+                    .blur(radius: 8)
+                    .opacity(isGlowing ? 0.8 : 0.4)
+                    .frame(width: 220, height: 220)
+                
+                // Background circles
+                Circle()
+                    .stroke(Color.white.opacity(0.1), lineWidth: 20)
                     .frame(width: 200, height: 200)
+                
+                Circle()
+                    .stroke(Theme.mainPurple.opacity(0.2), lineWidth: 20)
+                    .frame(width: 200, height: 200)
+                
+                // Animated dots around the circle
+                ForEach(0..<8) { index in
+                    Circle()
+                        .fill(Theme.mainGradient)
+                        .frame(width: 8, height: 8)
+                        .offset(y: -100)
+                        .rotationEffect(.degrees(Double(index) * 45))
+                        .rotationEffect(.degrees(isRotating ? 360 : 0))
+                        .opacity(currentSteps > 0 ? 1 : 0)
+                }
                 
                 // Progress circle
                 Circle()
                     .trim(from: 0, to: CGFloat(min(currentSteps, 15)) / 15.0)
                     .stroke(
                         Theme.mainGradient,
-                        style: StrokeStyle(lineWidth: 12, lineCap: .round)
+                        style: StrokeStyle(lineWidth: 20, lineCap: .round)
                     )
                     .frame(width: 200, height: 200)
                     .rotationEffect(.degrees(-90))
-                    .animation(.spring(), value: currentSteps)
+                    .animation(.spring(response: 0.6), value: currentSteps)
                 
-                // Steps counter
-                VStack(spacing: 4) {
+                // Center content
+                VStack(spacing: 8) {
                     Text("\(currentSteps)")
-                        .font(.system(size: 48, weight: .bold))
+                        .font(.system(size: 56, weight: .bold))
                         .foregroundColor(.white)
-                    Text("/ 15 steps")
-                        .font(Theme.subtitleStyle)
+                        .contentTransition(.numericText())
+                    
+                    Text("steps to unlock")
+                        .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.white.opacity(0.7))
                 }
             }
-            .padding(.vertical, Theme.standardPadding)
+            .padding(.vertical, 20)
+            
+            // Progress text
+            Text("\(15 - currentSteps) steps remaining")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundColor(.white.opacity(0.9))
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(
+                    Capsule()
+                        .fill(Color.white.opacity(0.1))
+                )
         }
-        .padding(Theme.standardPadding)
+        .padding(32)
         .background(
-            RoundedRectangle(cornerRadius: Theme.largeCornerRadius)
-                .fill(Color.black.opacity(0.8))
-                .shadow(radius: 10)
+            ZStack {
+                // Gradient background
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.black.opacity(0.8),
+                        Color(red: 0.2, green: 0.2, blue: 0.3).opacity(0.9)
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                
+                // Animated background particles
+                ForEach(0..<15) { index in
+                    Circle()
+                        .fill(Theme.mainGradient)
+                        .frame(width: 4, height: 4)
+                        .blur(radius: 1)
+                        .opacity(0.5)
+                        .offset(x: .random(in: -100...100), y: .random(in: -100...100))
+                }
+            }
         )
-        .padding()
+        .clipShape(RoundedRectangle(cornerRadius: 32))
+        .overlay(
+            RoundedRectangle(cornerRadius: 32)
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+        )
+        .shadow(color: Theme.mainPurple.opacity(0.3), radius: 20, x: 0, y: 10)
+        .padding(.horizontal, 20)
+        .onAppear {
+            withAnimation(.linear(duration: 8).repeatForever(autoreverses: false)) {
+                isRotating = true
+            }
+            withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true)) {
+                isGlowing = true
+            }
+        }
         .onChange(of: currentSteps) { newValue in
             if newValue == 15 {
                 HapticManager.shared.notification(type: .success)
-            } else {
+            } else if newValue > 0 {
                 HapticManager.shared.impact(style: .light)
             }
         }

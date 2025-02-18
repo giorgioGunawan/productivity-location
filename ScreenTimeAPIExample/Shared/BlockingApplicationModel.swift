@@ -18,6 +18,8 @@ final class BlockingApplicationModel: ObservableObject {
         }
     }
     
+    @Published var newScheduleName: String = "New Schedule"
+    
     // Computed property for app tokens
     var selectedAppsTokens: Set<ApplicationToken> {
         newSelection.applicationTokens

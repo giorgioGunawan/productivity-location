@@ -6,6 +6,7 @@ import Combine
 import UserNotifications
 import BackgroundTasks
 import UIKit
+import SwiftUI
 
 extension DeviceActivityName {
     static let once = Self("once")
@@ -94,7 +95,7 @@ class AppBlocker: ObservableObject {
     var timer: Timer?
 
     func startBlockingSchedule(schedule: BlockSchedule) {
-        print("🔄 Starting blocking for schedule: \(schedule.formattedStartTime()) - \(schedule.formattedEndTime())")
+        // Logger.shared.log("Starting blocking for schedule: \(schedule.formattedStartTime()) - \(schedule.formattedEndTime())")
         
         // Add to active schedules
         activeSchedules.insert(schedule)
@@ -126,17 +127,15 @@ class AppBlocker: ObservableObject {
                                         blockStartMinute: schedule.startMinute,
                                         blockEndHour: schedule.endHour,
                                         blockEndMinute: schedule.endMinute) {
-                print("📱 Currently within schedule window - blocking apps")
+                Logger.shared.log("Currently within schedule window - blocking apps", type: .success)
+                Logger.shared.log("Monitor extension started successfully", type: .success)
                 // This is not technically needed, since startMonitoring will block
                 // but this makes it instant, while startMonitoring can have a bit of delay
                 store.shield.applications = model.selectedAppsTokens
-            } else {
-                print("⏳ Outside schedule window - waiting for start time")
             }
             
-            print("✅ Monitoring started successfully")
         } catch {
-            print("❌ Failed to start monitoring: \(error)")
+            Logger.shared.log("Failed to start monitoring: \(error)", type: .error)
         }
 
         self.currentSchedule = schedule
@@ -144,18 +143,6 @@ class AppBlocker: ObservableObject {
 
     func refreshSet() {
         activeSchedules = []
-    }
-
-    func removeSchedule(schedule: BlockSchedule) {
-        activeSchedules.remove(schedule)
-        let deviceActivityCenter = DeviceActivityCenter()
-        let activityName = DeviceActivityName("schedule_\(schedule.id.uuidString)")
-        deviceActivityCenter.stopMonitoring([activityName])
-        
-        // Check if we should unblock apps
-        if !isCurrentlyInAnyBlockWindow() && !isTemporarilyUnblocked {
-            unblockAllApps()
-        }
     }
 
     func isCurrentlyInAnyBlockWindow() -> Bool {
@@ -263,6 +250,8 @@ class AppBlocker: ObservableObject {
         var endComponents = DateComponents()
         endComponents.hour = blockEndHour
         endComponents.minute = blockEndMinute
+
+        Logger.shared.log("Starting 15-second temporary unblock", type: .warning)
         
         // Create the activity schedule
         let tempSchedule = DeviceActivitySchedule(
@@ -277,7 +266,7 @@ class AppBlocker: ObservableObject {
             deviceActivityCenter.stopMonitoring(activeActivityNames)
 
             try deviceActivityCenter.startMonitoring(.once, during: tempSchedule)
-            print("🔄 Monitor extension will start after \(seconds) seconds and run until \(blockEndHour):\(blockEndMinute).")
+            Logger.shared.log("🔄 Monitor extension will start after \(seconds) seconds and run until \(blockEndHour):\(blockEndMinute).")
 
             // Set unblock session details
             self.isUnblocking = true
@@ -289,7 +278,8 @@ class AppBlocker: ObservableObject {
                 self.isTemporarilyUnblocked = false
                 self.isUnblocking = false
                 self.unblockSessionEndTime = nil
-                
+
+                Logger.shared.log("🔄 Monitor extension stopped after \(seconds) seconds and run until \(blockEndHour):\(blockEndMinute).")
                 // Restart all active schedules
                 for schedule in self.activeSchedules {
                     self.startBlockingSchedule(schedule: schedule)
@@ -335,9 +325,13 @@ class AppBlocker: ObservableObject {
     }
     
     private func reblockApps() {
-        // Reblock apps using the stored selection
-        if let model = try? BlockingApplicationModel.shared {
-            store.shield.applications = model.selectedAppsTokens
+        // Only reblock if we're currently within a blocking window
+        if isCurrentlyInAnyBlockWindow() {
+            // Reblock apps using the stored selection
+            if let model = try? BlockingApplicationModel.shared {
+                store.shield.applications = model.selectedAppsTokens
+            }
+            
         }
         
         // End background task if running
@@ -534,16 +528,6 @@ class AppBlocker: ObservableObject {
         }
     }
 
-    // Method to prepare and show active schedules
-    func showActiveSchedules() {
-        var schedulesDescription = ""
-        for schedule in activeSchedules {
-            schedulesDescription += "Schedule ID: \(schedule.id), Start: \(schedule.formattedStartTime()), End: \(schedule.formattedEndTime())\n"
-        }
-        activeSchedulesText = schedulesDescription
-        showActiveSchedulesAlert = true
-    }
-
     func getDebugInfo() -> String {
         var info = "Latest or Current Schedule: "
         if let schedule = currentSchedule {
@@ -602,7 +586,8 @@ class AppBlocker: ObservableObject {
     }
 
     // Add these functions to the AppBlocker class
-    func unblockApplicationsTemporarily15seconds() {
+    func unblockApplicationsTemporarily15secondsManual() {
+        print("hello")
         // Start background task
         beginBackgroundTask()
         
@@ -638,5 +623,76 @@ class AppBlocker: ObservableObject {
         
         // Schedule notification
         scheduleBlockNotification(after: 5 * 60)
+    }
+
+    func unblockApplicationsTemporarily15seconds() {
+        // Replace with DeviceActivity version
+        guard let currentSchedule = currentSchedule else { return }
+        unblockWithDeviceActivity(
+            forDuration: 15,
+            blockEndHour: currentSchedule.endHour,
+            blockEndMinute: currentSchedule.endMinute
+        )
+
+        Timer.scheduledTimer(withTimeInterval: 15, repeats: false) { [weak self] _ in
+            self?.reblockIfWithinSchedule()
+            //UIApplication.shared.endBackgroundTask(backgroundTask)
+        }
+    }
+
+    func unblockApplicationsTemporarily15secondsHybrid() {
+        // 1. Direct unblock for immediate effect
+        store.shield.applications = []
+        
+        // 2. Setup background task
+        var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+        backgroundTask = UIApplication.shared.beginBackgroundTask { [weak self] in
+            // Cleanup if background task is about to expire
+            self?.reblockIfWithinSchedule()
+            UIApplication.shared.endBackgroundTask(backgroundTask)
+            backgroundTask = .invalid
+        }
+        
+        // 3. Setup DeviceActivity as backup
+        guard let currentSchedule = currentSchedule else {
+            UIApplication.shared.endBackgroundTask(backgroundTask)
+            return
+        }
+        
+        unblockWithDeviceActivity(
+            forDuration: 15,
+            blockEndHour: currentSchedule.endHour,
+            blockEndMinute: currentSchedule.endMinute
+        )
+        
+        // 4. Setup timer for primary reblock
+        Timer.scheduledTimer(withTimeInterval: 15, repeats: false) { [weak self] _ in
+            self?.reblockIfWithinSchedule()
+            UIApplication.shared.endBackgroundTask(backgroundTask)
+        }
+        
+        print("🔓 Hybrid unblock initiated for 15 seconds")
+    }
+
+    // New helper function
+    private func reblockIfWithinSchedule() {
+        guard let schedule = currentSchedule else { return }
+        
+        let now = Date()
+        let calendar = Calendar.current
+        let currentHour = calendar.component(.hour, from: now)
+        let currentMinute = calendar.component(.minute, from: now)
+        
+        // Convert current time and end time to minutes for easier comparison
+        let currentTimeInMinutes = currentHour * 60 + currentMinute
+        let endTimeInMinutes = schedule.endHour * 60 + schedule.endMinute
+        
+        // Only reblock if we haven't passed the end time
+        if currentTimeInMinutes < endTimeInMinutes {
+            reblockApps()
+            Logger.shared.log("🔒 Reblocking apps - within schedule")
+        } else {
+            Logger.shared.log("⏰ Not reblocking - schedule has ended")
+        }
     }
 }
