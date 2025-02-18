@@ -95,7 +95,7 @@ class AppBlocker: ObservableObject {
     var timer: Timer?
 
     func startBlockingSchedule(schedule: BlockSchedule) {
-        Logger.shared.log("Starting blocking for schedule: \(schedule.formattedStartTime()) - \(schedule.formattedEndTime())")
+        // Logger.shared.log("Starting blocking for schedule: \(schedule.formattedStartTime()) - \(schedule.formattedEndTime())")
         
         // Add to active schedules
         activeSchedules.insert(schedule)
@@ -128,14 +128,12 @@ class AppBlocker: ObservableObject {
                                         blockEndHour: schedule.endHour,
                                         blockEndMinute: schedule.endMinute) {
                 Logger.shared.log("Currently within schedule window - blocking apps", type: .success)
+                Logger.shared.log("Monitor extension started successfully", type: .success)
                 // This is not technically needed, since startMonitoring will block
                 // but this makes it instant, while startMonitoring can have a bit of delay
                 store.shield.applications = model.selectedAppsTokens
-            } else {
-                Logger.shared.log("Outside schedule window - waiting for start time", type: .warning)
             }
             
-            Logger.shared.log("Monitor extension started successfully", type: .success)
         } catch {
             Logger.shared.log("Failed to start monitoring: \(error)", type: .error)
         }
@@ -252,6 +250,8 @@ class AppBlocker: ObservableObject {
         var endComponents = DateComponents()
         endComponents.hour = blockEndHour
         endComponents.minute = blockEndMinute
+
+        Logger.shared.log("Starting 15-second temporary unblock", type: .warning)
         
         // Create the activity schedule
         let tempSchedule = DeviceActivitySchedule(
@@ -266,7 +266,7 @@ class AppBlocker: ObservableObject {
             deviceActivityCenter.stopMonitoring(activeActivityNames)
 
             try deviceActivityCenter.startMonitoring(.once, during: tempSchedule)
-            print("🔄 Monitor extension will start after \(seconds) seconds and run until \(blockEndHour):\(blockEndMinute).")
+            Logger.shared.log("🔄 Monitor extension will start after \(seconds) seconds and run until \(blockEndHour):\(blockEndMinute).")
 
             // Set unblock session details
             self.isUnblocking = true
@@ -278,7 +278,8 @@ class AppBlocker: ObservableObject {
                 self.isTemporarilyUnblocked = false
                 self.isUnblocking = false
                 self.unblockSessionEndTime = nil
-                
+
+                Logger.shared.log("🔄 Monitor extension stopped after \(seconds) seconds and run until \(blockEndHour):\(blockEndMinute).")
                 // Restart all active schedules
                 for schedule in self.activeSchedules {
                     self.startBlockingSchedule(schedule: schedule)
@@ -689,9 +690,9 @@ class AppBlocker: ObservableObject {
         // Only reblock if we haven't passed the end time
         if currentTimeInMinutes < endTimeInMinutes {
             reblockApps()
-            print("🔒 Reblocking apps - within schedule")
+            Logger.shared.log("🔒 Reblocking apps - within schedule")
         } else {
-            print("⏰ Not reblocking - schedule has ended")
+            Logger.shared.log("⏰ Not reblocking - schedule has ended")
         }
     }
 }
