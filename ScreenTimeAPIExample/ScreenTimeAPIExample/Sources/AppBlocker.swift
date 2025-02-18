@@ -146,18 +146,6 @@ class AppBlocker: ObservableObject {
         activeSchedules = []
     }
 
-    func removeSchedule(schedule: BlockSchedule) {
-        activeSchedules.remove(schedule)
-        let deviceActivityCenter = DeviceActivityCenter()
-        let activityName = DeviceActivityName("schedule_\(schedule.id.uuidString)")
-        deviceActivityCenter.stopMonitoring([activityName])
-        
-        // Check if we should unblock apps
-        if !isCurrentlyInAnyBlockWindow() && !isTemporarilyUnblocked {
-            unblockAllApps()
-        }
-    }
-
     func isCurrentlyInAnyBlockWindow() -> Bool {
         let currentDate = Date()
         return activeSchedules.contains { schedule in
@@ -535,16 +523,6 @@ class AppBlocker: ObservableObject {
                 print("🔒 Other active schedules found, keeping apps blocked")
             }
         }
-    }
-
-    // Method to prepare and show active schedules
-    func showActiveSchedules() {
-        var schedulesDescription = ""
-        for schedule in activeSchedules {
-            schedulesDescription += "Schedule ID: \(schedule.id), Start: \(schedule.formattedStartTime()), End: \(schedule.formattedEndTime())\n"
-        }
-        activeSchedulesText = schedulesDescription
-        showActiveSchedulesAlert = true
     }
 
     func getDebugInfo() -> String {

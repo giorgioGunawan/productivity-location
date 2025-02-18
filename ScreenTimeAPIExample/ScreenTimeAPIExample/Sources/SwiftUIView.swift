@@ -257,7 +257,9 @@ struct SwiftUIView: View {
                 ),
                 onDelete: {
                     if let index = model.schedules.firstIndex(where: { $0.id == schedule.id }) {
+                        let deletedSchedule = model.schedules[index]
                         model.schedules.remove(at: index)
+                        appBlocker.removeAndCheckSchedule(deletedSchedule)
                         selectedSchedule = nil
                     }
                 },
