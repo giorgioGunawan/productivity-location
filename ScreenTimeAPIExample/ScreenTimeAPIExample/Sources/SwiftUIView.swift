@@ -27,7 +27,6 @@ struct SwiftUIView: View {
     @State private var showingCelebration = false
     @State private var showingStepsWidget = false
     @State private var selectedSchedule: BlockSchedule?
-    @State private var editMode = EditMode.inactive
     
     init() {
         let calendar = Calendar.current
@@ -43,241 +42,236 @@ struct SwiftUIView: View {
         _scheduleEndMinute = State(initialValue: laterComponents.minute ?? 0)
     }
     var view: some View {
-        VStack(spacing: Theme.standardPadding) {
-            // Header
-            HStack {
-                Spacer()
-                Button(action: { isPresented.toggle() }) {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 20))
-                        Text("Add Apps")
-                            .font(Theme.subtitleStyle)
-                    }
-                    .foregroundColor(Theme.mainPurple)
-                    .frame(height: Theme.minimumTapTarget)
-                    .padding(.horizontal, Theme.standardPadding)
-                    .background(
-                        Capsule()
-                            .fill(Theme.mainPurple.opacity(0.1))
-                    )
-                }
-                .familyActivityPicker(isPresented: $isPresented, selection: $model.newSelection)
-            }
-            .padding(.horizontal, Theme.standardPadding)
-            .padding(.top, Theme.standardPadding)
-            
-            // Schedules List
-            List {
-                ForEach(model.schedules) { schedule in
-                    ScheduleCard(schedule: schedule) {
-                        HapticManager.shared.impact(style: .medium)
-                        selectedSchedule = schedule
-                    }
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.standardCornerRadius)
-                            .stroke(Theme.mainPurple.opacity(0.3), lineWidth: 2)
-                    )
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                    .listRowSeparator(.hidden)
-                }
-                .onMove { source, destination in
-                    HapticManager.shared.impact(style: .light)
-                    model.moveSchedule(from: source, to: destination)
-                }
-            }
-            .listStyle(PlainListStyle())
-            .environment(\.editMode, $editMode)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        HapticManager.shared.impact(style: .medium)
-                        editMode = editMode == .active ? .inactive : .active
-                    }) {
-                        Image(systemName: editMode == .active ? "checkmark.circle.fill" : "list.bullet")
-                            .foregroundColor(Theme.mainPurple)
-                    }
-                }
-            }
-            
-            // Action Buttons
+        NavigationView {
             VStack(spacing: Theme.standardPadding) {
-                Button(action: { showingAddSchedule = true }) {
-                    HStack {
-                        Image(systemName: "clock.fill")
-                        Text("Add Schedule")
+                // Header
+                HStack {
+                    Spacer()
+                    Button(action: { isPresented.toggle() }) {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 20))
+                            Text("Add Apps")
+                                .font(Theme.subtitleStyle)
+                        }
+                        .foregroundColor(Theme.mainPurple)
+                        .frame(height: Theme.minimumTapTarget)
+                        .padding(.horizontal, Theme.standardPadding)
+                        .background(
+                            Capsule()
+                                .fill(Theme.mainPurple.opacity(0.1))
+                        )
                     }
-                    .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
-                    .font(Theme.subtitleStyle)
-                    .foregroundColor(.white)
-                    .background(Theme.mainGradient)
-                    .cornerRadius(Theme.largeCornerRadius)
-                    .shadow(radius: 5)
+                    .familyActivityPicker(isPresented: $isPresented, selection: $model.newSelection)
                 }
+                .padding(.horizontal, Theme.standardPadding)
+                .padding(.top, Theme.standardPadding)
                 
-                Button(action: { unblockApplicationsTemporarily5minutes() }) {
-                    HStack {
-                        Image(systemName: "figure.walk.circle.fill")
-                        Text("Take a Break (5 min)")
+                // Schedules List
+                List {
+                    ForEach(model.schedules) { schedule in
+                        ScheduleCard(schedule: schedule) {
+                            HapticManager.shared.impact(style: .medium)
+                            selectedSchedule = schedule
+                        }
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.standardCornerRadius)
+                                .stroke(Theme.mainPurple.opacity(0.3), lineWidth: 2)
+                        )
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                        .listRowSeparator(.hidden)
                     }
-                    .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
-                    .font(Theme.subtitleStyle)
-                    .foregroundColor(Theme.mainPurple)
-                    .background(
-                        RoundedRectangle(cornerRadius: Theme.largeCornerRadius)
-                            .fill(Theme.background)
-                            .shadow(radius: 5)
+                }
+                .listStyle(PlainListStyle())
+                
+                // Action Buttons
+                VStack(spacing: Theme.standardPadding) {
+                    Button(action: { showingAddSchedule = true }) {
+                        HStack {
+                            Image(systemName: "clock.fill")
+                            Text("Add Schedule")
+                        }
+                        .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
+                        .font(Theme.subtitleStyle)
+                        .foregroundColor(.white)
+                        .background(Theme.mainGradient)
+                        .cornerRadius(Theme.largeCornerRadius)
+                        .shadow(radius: 5)
+                    }
+                    
+                    Button(action: { unblockApplicationsTemporarily5minutes() }) {
+                        HStack {
+                            Image(systemName: "figure.walk.circle.fill")
+                            Text("Take a Break (5 min)")
+                        }
+                        .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
+                        .font(Theme.subtitleStyle)
+                        .foregroundColor(Theme.mainPurple)
+                        .background(
+                            RoundedRectangle(cornerRadius: Theme.largeCornerRadius)
+                                .fill(Theme.background)
+                                .shadow(radius: 5)
+                        )
+                    }
+                }
+                .padding(.horizontal, Theme.standardPadding)
+                .padding(.bottom, Theme.standardPadding)
+                
+                if showingStepsWidget {
+                    StepsWidget(currentSteps: currentSteps) {
+                        withAnimation {
+                            showingStepsWidget = false
+                        }
+                        appBlocker.stopStepCountUpdates()
+                        appBlocker.unblockAllApps()
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .background(Color(.systemGroupedBackground))
+            .preferredColorScheme(.dark)
+            .sheet(isPresented: $showingAddSchedule) {
+                NavigationView {
+                    Form {
+                        Section {
+                            TextField("Schedule Name", text: .init(
+                                get: { model.newScheduleName },
+                                set: { model.newScheduleName = $0 }
+                            ))
+                        }
+                        
+                        Section {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Start Time")
+                                    .font(Theme.subtitleStyle)
+                                    .foregroundColor(Theme.mainPurple)
+                                
+                                HStack(spacing: 16) {
+                                    TimePickerField(
+                                        value: $scheduleStartHour,
+                                        range: 0...23,
+                                        label: "Hour"
+                                    )
+                                    
+                                    Text(":")
+                                        .font(Theme.titleStyle)
+                                        .foregroundColor(.secondary)
+                                    
+                                    TimePickerField(
+                                        value: $scheduleStartMinute,
+                                        range: 0...59,
+                                        label: "Minute"
+                                    )
+                                }
+                                .padding(.vertical, 8)
+                            }
+                        }
+                        
+                        Section {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("End Time")
+                                    .font(Theme.subtitleStyle)
+                                    .foregroundColor(Theme.mainPurple)
+                                
+                                HStack(spacing: 16) {
+                                    TimePickerField(
+                                        value: $scheduleEndHour,
+                                        range: 0...23,
+                                        label: "Hour"
+                                    )
+                                    
+                                    Text(":")
+                                        .font(Theme.titleStyle)
+                                        .foregroundColor(.secondary)
+                                    
+                                    TimePickerField(
+                                        value: $scheduleEndMinute,
+                                        range: 0...59,
+                                        label: "Minute"
+                                    )
+                                }
+                                .padding(.vertical, 8)
+                            }
+                        }
+                    }
+                    .navigationTitle("Add Schedule")
+                    .navigationBarItems(
+                        leading: Button("Cancel") {
+                            showingAddSchedule = false
+                        }
+                        .foregroundColor(Theme.mainPurple),
+                        trailing: Button("Save") {
+                            HapticManager.shared.notification(type: .success)
+                            let newSchedule = BlockSchedule(
+                                startHour: scheduleStartHour,
+                                startMinute: scheduleStartMinute,
+                                endHour: scheduleEndHour,
+                                endMinute: scheduleEndMinute,
+                                name: model.newScheduleName
+                            )
+                            model.addScheduleOptimistically(newSchedule)
+                            model.newScheduleName = "New Schedule"
+                            showingAddSchedule = false
+                        }
+                        .font(.headline)
+                        .foregroundColor(Theme.mainPurple)
                     )
                 }
             }
-            .padding(.horizontal, Theme.standardPadding)
-            .padding(.bottom, Theme.standardPadding)
-            
-            if showingStepsWidget {
-                StepsWidget(currentSteps: currentSteps) {
+            .overlay(
+                // Show loading indicator when processing
+                Group {
+                    if model.isProcessing {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(Color.black.opacity(0.2))
+                    }
+                }
+            )
+            .onReceive(appBlocker.$stepCount) { newCount in
+                print("Received new count in view: \(newCount)")
+                withAnimation {
+                    currentSteps = newCount
+                    if newCount >= 15 && !showingCelebration {
+                        showingCelebration = true
+                    }
+                }
+            }
+            .sheet(item: $selectedSchedule) { schedule in
+                ScheduleDetailView(
+                    schedule: Binding(
+                        get: { schedule },
+                        set: { newSchedule in
+                            if let index = model.schedules.firstIndex(where: { $0.id == schedule.id }) {
+                                model.schedules[index] = newSchedule
+                            }
+                        }
+                    ),
+                    onDelete: {
+                        if let index = model.schedules.firstIndex(where: { $0.id == schedule.id }) {
+                            let deletedSchedule = model.schedules[index]
+                            model.deleteScheduleOptimistically(deletedSchedule)
+                            selectedSchedule = nil
+                        }
+                    },
+                    onClose: {
+                        selectedSchedule = nil
+                    }
+                )
+            }
+            .alert("Congratulations! 🎉", isPresented: $showingCelebration) {
+                Button("OK", role: .cancel) {
                     withAnimation {
                         showingStepsWidget = false
                     }
                     appBlocker.stopStepCountUpdates()
                     appBlocker.unblockAllApps()
                 }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+            } message: {
+                Text("You've reached 15 steps! Your apps are now unblocked.")
             }
-        }
-        .background(Color(.systemGroupedBackground))
-        .preferredColorScheme(.dark)
-        .sheet(isPresented: $showingAddSchedule) {
-            NavigationView {
-                Form {
-                    Section {
-                        TextField("Schedule Name", text: .init(
-                            get: { model.newScheduleName },
-                            set: { model.newScheduleName = $0 }
-                        ))
-                    }
-                    
-                    Section {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Start Time")
-                                .font(Theme.subtitleStyle)
-                                .foregroundColor(Theme.mainPurple)
-                            
-                            HStack(spacing: 16) {
-                                TimePickerField(
-                                    value: $scheduleStartHour,
-                                    range: 0...23,
-                                    label: "Hour"
-                                )
-                                
-                                Text(":")
-                                    .font(Theme.titleStyle)
-                                    .foregroundColor(.secondary)
-                                
-                                TimePickerField(
-                                    value: $scheduleStartMinute,
-                                    range: 0...59,
-                                    label: "Minute"
-                                )
-                            }
-                            .padding(.vertical, 8)
-                        }
-                    }
-                    
-                    Section {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("End Time")
-                                .font(Theme.subtitleStyle)
-                                .foregroundColor(Theme.mainPurple)
-                            
-                            HStack(spacing: 16) {
-                                TimePickerField(
-                                    value: $scheduleEndHour,
-                                    range: 0...23,
-                                    label: "Hour"
-                                )
-                                
-                                Text(":")
-                                    .font(Theme.titleStyle)
-                                    .foregroundColor(.secondary)
-                                
-                                TimePickerField(
-                                    value: $scheduleEndMinute,
-                                    range: 0...59,
-                                    label: "Minute"
-                                )
-                            }
-                            .padding(.vertical, 8)
-                        }
-                    }
-                }
-                .navigationTitle("Add Schedule")
-                .navigationBarItems(
-                    leading: Button("Cancel") {
-                        showingAddSchedule = false
-                    }
-                    .foregroundColor(Theme.mainPurple),
-                    trailing: Button("Save") {
-                        HapticManager.shared.notification(type: .success)
-                        let newSchedule = BlockSchedule(
-                            startHour: scheduleStartHour,
-                            startMinute: scheduleStartMinute,
-                            endHour: scheduleEndHour,
-                            endMinute: scheduleEndMinute,
-                            name: model.newScheduleName
-                        )
-                        model.schedules.append(newSchedule)
-                        appBlocker.startBlockingSchedule(schedule: newSchedule)
-                        model.newScheduleName = "New Schedule"
-                        showingAddSchedule = false
-                    }
-                    .font(.headline)
-                    .foregroundColor(Theme.mainPurple)
-                )
-            }
-        }
-        .onReceive(appBlocker.$stepCount) { newCount in
-            print("Received new count in view: \(newCount)")
-            withAnimation {
-                currentSteps = newCount
-                if newCount >= 15 && !showingCelebration {
-                    showingCelebration = true
-                }
-            }
-        }
-        .sheet(item: $selectedSchedule) { schedule in
-            ScheduleDetailView(
-                schedule: Binding(
-                    get: { schedule },
-                    set: { newSchedule in
-                        if let index = model.schedules.firstIndex(where: { $0.id == schedule.id }) {
-                            model.schedules[index] = newSchedule
-                        }
-                    }
-                ),
-                onDelete: {
-                    if let index = model.schedules.firstIndex(where: { $0.id == schedule.id }) {
-                        let deletedSchedule = model.schedules[index]
-                        model.schedules.remove(at: index)
-                        appBlocker.removeAndCheckSchedule(deletedSchedule)
-                        selectedSchedule = nil
-                    }
-                },
-                onClose: {
-                    selectedSchedule = nil
-                }
-            )
-        }
-        .alert("Congratulations! 🎉", isPresented: $showingCelebration) {
-            Button("OK", role: .cancel) {
-                withAnimation {
-                    showingStepsWidget = false
-                }
-                appBlocker.stopStepCountUpdates()
-                appBlocker.unblockAllApps()
-            }
-        } message: {
-            Text("You've reached 15 steps! Your apps are now unblocked.")
         }
     }
 
@@ -287,10 +281,12 @@ struct SwiftUIView: View {
     
     private func unblockApplicationsTemporarily5minutes() {
         HapticManager.shared.impact(style: .medium)
+        // First show widget and start counting steps
         withAnimation {
             showingStepsWidget = true
         }
-        appBlocker.unblockApplicationsTemporarily5minutes()
+        appBlocker.startStepCountUpdates()
+        // Don't unblock yet - we'll do it when steps reach 15
     }
 }
 

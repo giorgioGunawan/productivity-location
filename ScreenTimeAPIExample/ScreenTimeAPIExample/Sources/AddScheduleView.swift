@@ -38,21 +38,27 @@ struct AddScheduleView: View {
                     presentationMode.wrappedValue.dismiss()
                 },
                 trailing: Button("Add") {
-                    let newSchedule = BlockSchedule(
-                        startHour: startHour,
-                        startMinute: startMinute,
-                        endHour: endHour,
-                        endMinute: endMinute,
-                        name: name,
-                        selectedApps: selection.applicationTokens
-                    )
-                    model.schedules.append(newSchedule)
-                    presentationMode.wrappedValue.dismiss()
+                    addSchedule()
                 }
             )
             .sheet(isPresented: $showingAppsPicker) {
                 FamilyActivityPicker(selection: $selection)
             }
         }
+    }
+    
+    private func addSchedule() {
+        let newSchedule = BlockSchedule(
+            startHour: startHour,
+            startMinute: startMinute,
+            endHour: endHour,
+            endMinute: endMinute,
+            name: name,
+            selectedApps: selection.applicationTokens
+        )
+        
+        // Use optimistic update
+        model.addScheduleOptimistically(newSchedule)
+        presentationMode.wrappedValue.dismiss()
     }
 } 

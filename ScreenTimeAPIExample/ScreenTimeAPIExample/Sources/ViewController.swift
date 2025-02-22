@@ -352,78 +352,23 @@ final class ViewController: UIViewController {
     
     @objc private func handleDebugTap() {
         print("🔧 Debug tap received")
-        
-        let alert = UIAlertController(
-            title: "Debug Options",
-            message: "Choose an action",
-            preferredStyle: .actionSheet
-        )
-        
-        alert.addAction(UIAlertAction(title: "Restart Onboarding", style: .default) { [weak self] _ in
-            self?.onboardingModel.hasCompletedOnboarding = false
-            UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
-            
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                let model = BlockingApplicationModel.shared
-                self._contentView.rootView = AnyView(OnboardingView(onboardingModel: self.onboardingModel))
-                print("🔧 Reset to onboarding view")
+        let debugInfo = appBlocker.getDebugInfo()
+        let debugView = UIHostingController(rootView: DebugView(
+            debugInfo: debugInfo,
+            appBlocker: appBlocker,
+            onRestartOnboarding: { [weak self] in
+                self?.onboardingModel.hasCompletedOnboarding = false
+                UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+                
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    let model = BlockingApplicationModel.shared
+                    self._contentView.rootView = AnyView(OnboardingView(onboardingModel: self.onboardingModel))
+                    print("🔧 Reset to onboarding view")
+                }
             }
-        })
-        
-        alert.addAction(UIAlertAction(title: "Unblock All Apps", style: .default) { [weak self] _ in
-            guard let self = self else { return }
-            appBlocker.unblockAllApps()
-            print("🔧 Unblocked all apps")
-        })
-
-        alert.addAction(UIAlertAction(title: "Unblock 15 seconds", style: .default) { [weak self] _ in
-            print("🎯 Starting temporary unblock")
-            guard let self = self else { return }
-            
-            appBlocker.unblockApplicationsTemporarily15seconds()
-            print("🎯 Unblock command sent")
-        })
-
-        alert.addAction(UIAlertAction(title: "Unblock 5 mins", style: .default) { [weak self] _ in
-            print("🎯 Starting temporary unblock")
-            guard let self = self else { return }
-            
-            appBlocker.unblockApplicationsTemporarily5minutes()
-            print("🎯 Unblock command sent")
-        })
-        
-        alert.addAction(UIAlertAction(title: "Show Active Schedules", style: .default) { [weak self] _ in
-            guard let self = self else { return }
-            self.showActiveSchedules()
-        })
-        
-        alert.addAction(UIAlertAction(title: "Show Logs", style: .default) { [weak self] _ in
-            guard let self = self else { return }
-            let loggerVC = UIHostingController(rootView: LoggerView())
-            self.present(loggerVC, animated: true)
-        })
-        
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-
-        alert.addAction(UIAlertAction(title: "Debug Active Schedules", style: .default) { [weak self] _ in
-            guard let self = self else { return }
-            self.debugActiveSchedules()
-        })
-
-        alert.addAction(UIAlertAction(title: "Refresh Set", style: .default) { [weak self] _ in
-            guard let self = self else { return }
-            appBlocker.refreshSet()
-        })
-        
-        present(alert, animated: true)
-    }
-    // Method to show active schedules
-    private func debugActiveSchedules() {
-        let debugInfo = appBlocker.getDebugInfo() // Get the debug information
-        let alert = UIAlertController(title: "Debug Active Schedules", message: debugInfo, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
-        present(alert, animated: true, completion: nil)
+        ))
+        present(debugView, animated: true)
     }
     
     private func setupOnboardingObserver() {

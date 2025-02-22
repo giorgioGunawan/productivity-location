@@ -68,6 +68,21 @@ class AppBlocker: ObservableObject {
         
         // Register for background task
         registerBackgroundTask()
+        
+        // Add notification observers
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleStartBlockingSchedule),
+            name: Notification.Name("StartBlockingSchedule"),
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleRemoveSchedule),
+            name: Notification.Name("RemoveSchedule"),
+            object: nil
+        )
     }
     
     // Save active schedules to UserDefaults
@@ -554,14 +569,23 @@ class AppBlocker: ObservableObject {
                 let steps = data.numberOfSteps.intValue
                 print("Raw steps from pedometer: \(steps)")
                 
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
+                // Make sure to update UI on main thread
+                DispatchQueue.main.async {
                     self.stepCount = steps
                     print("Step count after update: \(self.stepCount)")
                     
                     if steps >= 15 && !self.hasReachedGoal {
                         self.hasReachedGoal = true
                         self.pedometer?.stopUpdates()
+                        // Now unblock for 5 minutes
+                        if let currentSchedule = self.currentSchedule {
+                            self.unblockWithDeviceActivity(
+                                forDuration: 300,
+                                blockEndHour: currentSchedule.endHour,
+                                blockEndMinute: currentSchedule.endMinute,
+                                currentSchedule: currentSchedule
+                            )
+                        }
                         // Save reblock date to UserDefaults
                         UserDefaults.standard.set(Date().addingTimeInterval(5 * 60), forKey: "reblockDate")
                     }
@@ -680,6 +704,18 @@ class AppBlocker: ObservableObject {
             Logger.shared.log("🔒 Reblocking apps - within schedule")
         } else {
             Logger.shared.log("⏰ Not reblocking - schedule has ended")
+        }
+    }
+
+    @objc private func handleStartBlockingSchedule(_ notification: Notification) {
+        if let schedule = notification.userInfo?["schedule"] as? BlockSchedule {
+            startBlockingSchedule(schedule: schedule)
+        }
+    }
+
+    @objc private func handleRemoveSchedule(_ notification: Notification) {
+        if let schedule = notification.userInfo?["schedule"] as? BlockSchedule {
+            removeAndCheckSchedule(schedule)
         }
     }
 }

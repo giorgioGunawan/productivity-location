@@ -27,6 +27,7 @@
 		D05CF3882CE3FED000399A6A /* BlockSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CF3832CE3FED000399A6A /* BlockSchedule.swift */; };
 		D07100072D64C9F6003FFE9C /* LoggerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07100052D64C9F6003FFE9C /* LoggerView.swift */; };
 		D07100082D64C9F6003FFE9C /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07100062D64C9F6003FFE9C /* Logger.swift */; };
+		D071000A2D69F2C9003FFE9C /* DebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07100092D69F2C9003FFE9C /* DebugView.swift */; };
 		D0F473872B9DE4EA000B08DD /* DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F473862B9DE4EA000B08DD /* DeviceActivityMonitorExtension.swift */; };
 		D0F4738C2B9DE4EA000B08DD /* productivityApp.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D0F473832B9DE4EA000B08DD /* productivityApp.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D0F473912B9DE74D000B08DD /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F7DEEAF29F692A80017CD69 /* DeviceActivity.framework */; };
@@ -115,6 +116,7 @@
 		D05CF3832CE3FED000399A6A /* BlockSchedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockSchedule.swift; sourceTree = "<group>"; };
 		D07100052D64C9F6003FFE9C /* LoggerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoggerView.swift; sourceTree = "<group>"; };
 		D07100062D64C9F6003FFE9C /* Logger.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
+		D07100092D69F2C9003FFE9C /* DebugView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DebugView.swift; sourceTree = "<group>"; };
 		D0F473832B9DE4EA000B08DD /* productivityApp.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = productivityApp.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0F473862B9DE4EA000B08DD /* DeviceActivityMonitorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceActivityMonitorExtension.swift; sourceTree = "<group>"; };
 		D0F473882B9DE4EA000B08DD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -172,6 +174,7 @@
 		8F56E03229F74D67005ED24E /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				D07100092D69F2C9003FFE9C /* DebugView.swift */,
 				D07100062D64C9F6003FFE9C /* Logger.swift */,
 				D07100052D64C9F6003FFE9C /* LoggerView.swift */,
 				D02B29432D61D4DA00E2D223 /* Theme.swift */,
@@ -479,6 +482,7 @@
 				8F56E03C29F7808A005ED24E /* SwiftUIView.swift in Sources */,
 				8F7DEE7D29F680CC0017CD69 /* SceneDelegate.swift in Sources */,
 				8F7092E429F956BA0040955D /* BlockingApplicationModel.swift in Sources */,
+				D071000A2D69F2C9003FFE9C /* DebugView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
