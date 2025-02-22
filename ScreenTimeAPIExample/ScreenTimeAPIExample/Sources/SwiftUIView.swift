@@ -116,7 +116,7 @@ struct SwiftUIView: View {
                     .shadow(radius: 5)
                 }
                 
-                Button(action: { unblockTemp() }) {
+                Button(action: { unblockApplicationsTemporarily5minutes() }) {
                     HStack {
                         Image(systemName: "figure.walk.circle.fill")
                         Text("Take a Break (5 min)")
@@ -285,12 +285,12 @@ struct SwiftUIView: View {
         view
     }
     
-    private func unblockTemp() {
+    private func unblockApplicationsTemporarily5minutes() {
         HapticManager.shared.impact(style: .medium)
         withAnimation {
             showingStepsWidget = true
         }
-        appBlocker.unblockTemp()
+        appBlocker.unblockApplicationsTemporarily5minutes()
     }
 }
 
